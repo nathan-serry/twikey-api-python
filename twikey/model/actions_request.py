@@ -12,41 +12,14 @@ class MandateActionRequest:
         manualCheck (bool, optional): If True, disable automatic validation for B2B mandates.
     """
 
-    __slots__ = ["mndtId", "invite", "reminder", "access", "automaticCheck", "manualCheck"]
+    __slots__ = ["mndt_id", "type", "reminder"]
 
-    def __init__(
-            self,
-            mndtId: str,
-            invite: bool = False,
-            reminder: bool = False,
-            access: bool = False,
-            automaticCheck: bool = False,
-            manualCheck: bool = False,
-    ):
-        self.mndtId = mndtId
-        self.invite = invite
-        self.reminder = reminder
-        self.access = access
-        self.automaticCheck = automaticCheck
-        self.manualCheck = manualCheck
+    def __init__(self, **kwargs):
+        for attr in self.__slots__:
+            setattr(self, attr, kwargs.get(attr))
 
     def to_request(self) -> dict:
-        """
-        Converts the MandateActionRequest to a dictionary
-        for sending as request parameters to the Twikey API.
-
-        Returns:
-            dict: Dictionary with keys mapped to API parameters,
-                  including only True flags.
-        """
-        retval = {"mndtId": self.mndtId}
-
-        # Only include parameters set to True
-        for attr in self.__slots__:
-            if attr == "mndtId":
-                continue
-            value = getattr(self, attr)
-            if value:
-                retval[attr] = "true"
-
+        retval = {"mndtId": self.mndt_id, "type": self.type}
+        if self.reminder is not None and self.reminder != "":
+            retval["reminder"]=self.reminder
         return retval

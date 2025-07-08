@@ -1,5 +1,6 @@
 from .invite_request import InviteRequest
 
+
 class SignRequest(InviteRequest):
 
     """
@@ -34,6 +35,7 @@ class SignRequest(InviteRequest):
     }}
 
     def __init__(self, **kwargs):
+        _ = InviteRequest  # To indicate intentional inheritance without call
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
 
@@ -56,3 +58,8 @@ class SignResponse:
     def __init__(self, **kwargs):
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
+
+    def __str__(self):
+        return (
+            f"InviteResponse: MndtId {self.MndtId}: url={self.url} \n"
+        )

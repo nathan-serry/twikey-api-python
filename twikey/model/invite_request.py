@@ -112,3 +112,6 @@ class InviteResponse:
     def __init__(self, **kwargs):
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
+
+    def __str__(self):
+        return f"InviteResponse url={self.url}, key={self.key}, mndtId={self.mndtId}"

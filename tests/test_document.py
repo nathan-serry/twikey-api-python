@@ -5,16 +5,18 @@ import unittest
 from twikey.model.invite_request import InviteRequest
 from twikey.model.fetch_request import FetchMandateRequest
 from twikey.model.sign_request import SignRequest
+from twikey.model.actions_request import MandateActionRequest
 
 class TestDocument(unittest.TestCase):
-    _twikey = None
+
 
     @unittest.skipIf("TWIKEY_API_KEY" not in os.environ, "No TWIKEY_API_KEY set")
     def setUp(self):
+        if "TWIKEY_API_KEY" not in os.environ:
+            self.skipTest("No TWIKEY_API_KEY set")
+
         key = os.environ["TWIKEY_API_KEY"]
-        base_url = "https://test.beta.twikey.com/api/creditor"
-        if "TWIKEY_API_URL" in os.environ:
-            base_url = os.environ["TWIKEY_API_URL"]
+        base_url = os.environ["TWIKEY_API_URL"]
         self._twikey = twikey.TwikeyClient(key, base_url)
 
     def test_new_invite(self):
@@ -22,21 +24,23 @@ class TestDocument(unittest.TestCase):
         if "CT" in os.environ:
             ct = os.environ["CT"]
 
-        inviteRequest = InviteRequest(
-            ct=ct,
-            email="no-reply@twikey.com",
-            firstname="Info",
-            lastname="Twikey",
-            l="en",
-            address="Abby road",
-            city="Liverpool",
-            zip="1526",
-            country="BE",
-            mobile="",
-            iban="",
-            bic="",
+        invite = self._twikey.document.create(
+            InviteRequest(
+                ct=ct,
+                email="no-reply@twikey.com",
+                firstname="Info",
+                lastname="Twikey",
+                l="en",
+                address="Abby road",
+                city="Liverpool",
+                zip="1526",
+                country="BE",
+                mobile="",
+                iban="BE51561419613262",
+                bic="GKCCBEBB",
+            )
         )
-        invite = self._twikey.document.create(inviteRequest)
+        # print("invite:", invite)
         self.assertIsNotNone(invite)
 
     def test_sign(self):
@@ -44,7 +48,7 @@ class TestDocument(unittest.TestCase):
             sign_request = SignRequest(
                 ct="772",
                 l="en",
-                iban="BE36539660728150",
+                iban="BE51561419613262",
                 bic="GKCCBEBB",
                 customer_number="CUST001",
                 email="joe.doe@gmail.com",
@@ -80,11 +84,10 @@ class TestDocument(unittest.TestCase):
                 place="Brussels",
             )
             signed_mandate = self._twikey.document.sign(sign_request)
-            print("signed Response:", signed_mandate)
+            # print("signed Response:", signed_mandate)
             self.assertIsNotNone(signed_mandate)
             self.assertIsNotNone(signed_mandate.MndtId)
         except twikey.client.TwikeyError as e:
-            # Known Twikey error response structure
             error_message = str(e)
             if "already signed" in error_message.lower():
                 print("Mandate already signed. Skipping sign attempt.")
@@ -93,8 +96,36 @@ class TestDocument(unittest.TestCase):
             elif "smsPendingContract" in error_message:
                 print("Mandate is currently pending SMS signature.")
             else:
-                # Unexpected error, still raise it
                 raise
+
+    def test_fetch(self):
+        fetched_mandate = self._twikey.document.fetch(
+            FetchMandateRequest(
+                mndt_id="CORERECURRENTNL17071",
+                force=True,
+            )
+        )
+        # print("fetching Response:", fetched_mandate)
+        self.assertIsNotNone(fetched_mandate)
+
+    def test_cancel(self):
+        cancelled_mandate = self._twikey.document.cancel(
+            "MN543210",
+            "hello",
+        )
+        # print("cancel response:", cancelled_mandate)
+        self.assertIsNotNone(cancelled_mandate)
+
+    def test_action(self):
+        mandate_action = self._twikey.document.action(
+            MandateActionRequest(
+                mndt_id="CORERECURRENTNL17071",
+                type="reminder",
+                reminder="1"
+            )
+        )
+        # print("action Response:", mandate_action)
+        self.assertIsNotNone(mandate_action)
 
     def test_feed(self):
         self._twikey.document.feed(MyDocumentFeed())

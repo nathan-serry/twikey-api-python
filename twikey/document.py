@@ -2,8 +2,9 @@ import logging
 
 import requests
 from .model.invite_request import InviteRequest,InviteResponse
-from .model.fetch_request import FetchMandateRequest
+from .model.fetch_request import FetchMandateRequest, FetchResponse
 from .model.sign_request import SignRequest,SignResponse
+from .model.actions_request import MandateActionRequest
 
 class Document(object):
     def __init__(self, client) -> None:
@@ -43,7 +44,7 @@ class Document(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Sign", e)
 
-    def fetch(self, request: FetchMandateRequest):
+    def fetch(self, request: FetchMandateRequest) -> FetchResponse:
         data = request.to_request()
         url = self.client.instance_url("/mandate/detail")
         try:
@@ -54,8 +55,27 @@ class Document(object):
             if "ApiErrorCode" in response.headers:
                 raise self.client.raise_error("detail", response)
             json_response = response.json()
+            json_response["headers"] = response.headers
             self.logger.debug("Mandate details : %s" % json_response)
-            return json_response
+            return FetchResponse(**json_response)
+        except requests.exceptions.RequestException as e:
+            raise self.client.raise_error_from_request("detail", e)
+
+    def action(self, request: MandateActionRequest):
+        data = request.to_request()
+        url = self.client.instance_url(f"/mandate/{data.get('mndtId')}/action")
+        try:
+            self.client.refresh_token_if_required()
+            response = requests.post(
+                url=url, data=data, headers=self.client.headers(), timeout=15
+            )
+            if "ApiErrorCode" in response.headers:
+                raise self.client.raise_error("action", response)
+            # json_response = {}
+            if response.text == "":
+                return "204"
+            else:
+                return response.json()
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("detail", e)
 
@@ -87,6 +107,10 @@ class Document(object):
             )
             if "ApiErrorCode" in response.headers:
                 raise self.client.raise_error("Cancel", response)
+            if response.text == "":
+                return "204"
+            else:
+                return response.json()
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Cancel", e)
 
