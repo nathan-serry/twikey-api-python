@@ -2,7 +2,6 @@ import os
 import twikey
 import unittest
 
-
 class TestDocument(unittest.TestCase):
     _twikey = None
 
