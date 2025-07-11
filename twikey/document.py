@@ -2,15 +2,12 @@ import logging
 
 import requests
 
-from .model.actions_request import MandateActionRequest
-from .model.customer_access import CustomerAccessRequest, CustomerAccessResponse
-from .model.fetch_request import FetchMandateRequest, Document
-from .model.invite_request import InviteRequest, InviteResponse
-from .model.pdf_retrieve_request import PdfRetrieveRequest, PdfResponse
-from .model.pdf_upload_request import PdfUploadRequest
-from .model.query_request import QueryMandateRequest, QueryMandateResponse
-from .model.sign_request import SignRequest, SignResponse
-from .model.update_request import UpdateMandateRequest
+from twikey.model import (
+    InviteRequest, FetchMandateRequest, Document, SignRequest, MandateActionRequest, UpdateMandateRequest,
+    PdfRetrieveRequest, PdfUploadRequest, CustomerAccessRequest, QueryMandateRequest, InviteResponse, SignResponse,
+    QueryMandateResponse, PdfResponse, CustomerAccessResponse
+)
+
 
 class DocumentService(object):
     def __init__(self, client) -> None:
@@ -87,7 +84,6 @@ class DocumentService(object):
             return [QueryMandateResponse(contract) for contract in contracts_data]
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("query", e)
-
 
     def action(self, request: MandateActionRequest):
         data = request.to_request()
@@ -203,7 +199,8 @@ class DocumentService(object):
 
     def upload_pdf(self, request: PdfUploadRequest):
         data = request.to_request()
-        url = self.client.instance_url(f"/mandate/pdf?mndtId={data.get('mndtId')}&bankSignature={data.get('bankSignature')}")
+        url = self.client.instance_url(
+            f"/mandate/pdf?mndtId={data.get('mndtId')}&bankSignature={data.get('bankSignature')}")
         try:
             self.client.refresh_token_if_required()
             with open(data.get('pdfPath'), "rb") as file:

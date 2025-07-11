@@ -2,15 +2,10 @@ import os
 import twikey
 import unittest
 
-from twikey.model.invite_request import InviteRequest
-from twikey.model.fetch_request import FetchMandateRequest, Document
-from twikey.model.sign_request import SignRequest
-from twikey.model.actions_request import MandateActionRequest
-from twikey.model.update_request import UpdateMandateRequest
-from twikey.model.pdf_retrieve_request import PdfRetrieveRequest
-from twikey.model.pdf_upload_request import PdfUploadRequest
-from twikey.model.customer_access import CustomerAccessRequest
-from twikey.model.query_request import QueryMandateRequest
+from twikey.model import (
+    InviteRequest, FetchMandateRequest, Document, SignRequest, MandateActionRequest, UpdateMandateRequest,
+    PdfRetrieveRequest, PdfUploadRequest, CustomerAccessRequest, QueryMandateRequest,
+)
 
 
 class TestDocument(unittest.TestCase):
