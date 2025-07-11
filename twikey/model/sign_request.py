@@ -1,4 +1,15 @@
 from .invite_request import InviteRequest
+from enum import Enum
+
+
+class SignMethod(Enum):
+    SMS = "sms"
+    DIGISIGN = "digisign"
+    IMPORT = "import"
+    ITSME = "itsme"
+    EMACHTIGING = "emachtiging"
+    PAPER = "paper"
+    IDIN = "iDIN"
 
 
 class SignRequest(InviteRequest):
@@ -8,7 +19,7 @@ class SignRequest(InviteRequest):
     through various signing methods supported by the Twikey API.
 
     Attributes:
-        method (str): Method to sign (e.g., "sms", "digisign", "import", "itsme", "emachtiging", "paper").
+        method (SignMethod): Method to sign (e.g., "sms", "digisign", "import", "itsme", "emachtiging", "paper").
                       Required.
         digsig (str, optional): Wet signature as PNG image encoded in base64. Required if method is "digisign".
         key (str, optional): Shortcode from the invite URL. Use this instead of 'mandateNumber' to sign a prepared mandate directly.
@@ -35,6 +46,8 @@ class SignRequest(InviteRequest):
     }}
 
     def __init__(self, **kwargs):
+        if "method" in kwargs and isinstance(kwargs["method"], SignMethod):
+            kwargs["method"] = kwargs["method"].value
         _ = InviteRequest  # To indicate intentional inheritance without call
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
@@ -53,7 +66,7 @@ class SignRequest(InviteRequest):
         return retval
 
 class SignResponse:
-    __slots__ = ["MndtId"]
+    __slots__ = ["url", "MndtId"]
 
     def __init__(self, **kwargs):
         for attr in self.__slots__:
@@ -61,5 +74,5 @@ class SignResponse:
 
     def __str__(self):
         return (
-            f"MndtId {self.MndtId}\n"
+            f"InviteResponse: MndtId {self.MndtId}: url={self.url} \n"
         )

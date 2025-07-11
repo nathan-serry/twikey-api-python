@@ -4,7 +4,7 @@ import unittest
 
 from twikey.model import (
     InviteRequest, FetchMandateRequest, Document, SignRequest, MandateActionRequest, UpdateMandateRequest,
-    PdfRetrieveRequest, PdfUploadRequest, CustomerAccessRequest, QueryMandateRequest,
+    PdfRetrieveRequest, PdfUploadRequest, CustomerAccessRequest, QueryMandateRequest, SignMethod
 )
 
 
@@ -19,7 +19,7 @@ class TestDocument(unittest.TestCase):
         base_url = os.environ["TWIKEY_API_URL"]
         self._twikey = twikey.TwikeyClient(key, base_url)
 
-    @unittest.skip("reason for skipping")
+    # @unittest.skip("reason for skipping")
     def test_new_invite(self):
         ct = 1
         if "CT" in os.environ:
@@ -44,7 +44,7 @@ class TestDocument(unittest.TestCase):
         # print("invite:", invite)
         self.assertIsNotNone(invite)
 
-    @unittest.skip("testing unsigned doc = reason for skipping")
+    # @unittest.skip("testing unsigned doc = reason for skipping")
     def test_sign(self):
         signed_mandate = self._twikey.document.sign(
             SignRequest(
@@ -81,8 +81,8 @@ class TestDocument(unittest.TestCase):
                 subscription_amount=9.99,
                 subscription_message="Monthly membership",
                 subscription_ref="SUB001",
-                method="import",
-                sign_date="2025-07-03T14:21:45",
+                method=SignMethod.ITSME,
+                # sign_date="2025-07-03T14:21:45",
                 place="Brussels",
             )
         )
