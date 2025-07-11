@@ -2,6 +2,8 @@ import logging
 
 import requests
 
+from .model import InvoiceRequest, InvoiceCreatedResponse
+
 
 class Invoice(object):
     def __init__(self, client) -> None:
@@ -9,9 +11,9 @@ class Invoice(object):
         self.client = client
         self.logger = logging.getLogger(__name__)
 
-    def create(self, data, origin=False, purpose=False, manual=False):
+    def create(self, request: InvoiceRequest, origin=False, purpose=False, manual=False):
         url = self.client.instance_url("/invoice")
-        data = data or {}
+        data = request.to_request()
         try:
             self.client.refresh_token_if_required()
             headers = self.client.headers("application/json")
@@ -31,7 +33,7 @@ class Invoice(object):
             if "ApiErrorCode" in response.headers:
                 raise self.client.raise_error("Create invoice", response)
             self.logger.debug("Added invoice : %s" % json_response["url"])
-            return json_response
+            return InvoiceCreatedResponse(**json_response)
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Create invoice", e)
 

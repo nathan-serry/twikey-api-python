@@ -7,3 +7,4 @@ from .pdf_upload_request import PdfUploadRequest
 from .query_request import QueryMandateRequest, QueryMandateResponse
 from .sign_request import SignRequest, SignResponse
 from .update_request import UpdateMandateRequest
+from .invoice_request import InvoiceRequest, Customer, LineItem, InvoiceCreatedResponse

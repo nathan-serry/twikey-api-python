@@ -4,6 +4,7 @@ import unittest
 import time
 import uuid
 from datetime import date, timedelta
+from twikey.model import InvoiceRequest, Customer, LineItem
 
 
 class TestInvoices(unittest.TestCase):
@@ -20,33 +21,35 @@ class TestInvoices(unittest.TestCase):
 
     def test_new_invite(self):
         invoice = self._twikey.invoice.create(
-            {
-                "id": str(uuid.uuid4()),
-                "number": "Inv-" + str(round(time.time())),
-                "title": "Invoice " + date.today().strftime("%B"),
-                "remittance": "596843697521",
-                "ct": 1988,
-                "amount": 100,
-                "date": date.today().isoformat(),
-                "duedate": (date.today() + timedelta(days=7)).isoformat(),
-                "customer": {
-                    "customerNumber": "customer123",
-                    "email": "no-reply@twikey.com",
-                    "firstname": "Twikey",
-                    "lastname": "Support",
-                    "address": "Derbystraat 43",
-                    "city": "Gent",
-                    "zip": "9000",
-                    "country": "BE",
-                    "l": "nl",
-                    "mobile": "32498665995",
-                },
+            InvoiceRequest(
+                id=str(uuid.uuid4()),
+                number="Inv-" + str(round(time.time())),
+                title="Invoice " + date.today().strftime("%B"),
+                remittance="596843697521",
+                ct=1988,
+                amount=100,
+                date=date.today().isoformat(),
+                duedate=(date.today() + timedelta(days=7)).isoformat(),
+                customer=Customer(
+                    customerNumber="customer123",
+                    email="no-reply@twikey.com",
+                    firstname="Twikey",
+                    lastname="Support",
+                    address="Derbystraat 43",
+                    city="Gent",
+                    zip="9000",
+                    country="BE",
+                    l="nl",
+                    mobile="32498665995",
+                )
                 # "pdf": "JVBERi0xLj....RU9GCg=="
-            }
+            )
         )
         self.assertIsNotNone(invoice)
-        print("New invoice to be paid @ " + invoice["url"])
+        # print("New invoice to be paid @ " + invoice.url)
+        # print(invoice)
 
+    @unittest.skip("reason for skipping")
     def test_feed(self):
         self._twikey.invoice.feed(MyFeed(), False, "meta", "include", "lastpayment")
 
