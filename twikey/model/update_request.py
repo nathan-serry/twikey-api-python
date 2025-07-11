@@ -4,17 +4,17 @@ class UpdateMandateRequest:
     via the Twikey API.
 
     Attributes:
-        mndtId (str): Mandate reference (Twikey internal ID). Required.
+        mndt_id (str): Mandate reference (Twikey internal ID). Required.
         ct (int, optional): Move the document to a different template ID (of the same type).
         state (str, optional): 'active' or 'passive' (activate or suspend mandate).
         mobile (str, optional): Customer's mobile number in E.164 format.
         iban (str, optional): Debtor's IBAN.
         bic (str, optional): Debtor's BIC code.
-        customerNumber (str, optional): Customer number (add/update or move mandate).
+        customer_number (str, optional): Customer number (add/update or move mandate).
         email (str, optional): Debtor's email address.
-        firstname (str, optional): Debtor's first name.
-        lastname (str, optional): Debtor's last name.
-        companyName (str, optional): Company name on mandate.
+        first_name (str, optional): Debtor's first name.
+        last_name (str, optional): Debtor's last name.
+        company_name (str, optional): Company name on mandate.
         coc (str, optional): Enterprise number (only changeable if companyName is changed).
         l (str, optional): Language code on mandate.
         address (str, optional): Street address (required if updating address).
@@ -24,23 +24,23 @@ class UpdateMandateRequest:
     """
 
     __slots__ = [
-        "mndtId", "ct", "state", "mobile", "iban", "bic", "customerNumber",
-        "email", "firstname", "lastname", "companyName", "coc", "l",
+        "mndt_id", "ct", "state", "mobile", "iban", "bic", "customer_number",
+        "email", "first_name", "last_name", "company_name", "coc", "l",
         "address", "city", "zip", "country"
     ]
 
     _field_map = {
-        "mndtId": "mndtId",
+        "mndt_id": "mndtId",
         "ct": "ct",
         "state": "state",
         "mobile": "mobile",
         "iban": "iban",
         "bic": "bic",
-        "customerNumber": "customerNumber",
+        "customer_number": "customerNumber",
         "email": "email",
-        "firstname": "firstName",
-        "lastname": "lastName",
-        "companyName": "companyName",
+        "first_name": "firstName",
+        "last_name": "lastName",
+        "company_name": "companyName",
         "coc": "coc",
         "l": "l",
         "address": "address",
@@ -49,10 +49,10 @@ class UpdateMandateRequest:
         "country": "country",
     }
 
-    def __init__(self, mndtId: str, **kwargs):
-        self.mndtId = mndtId
+    def __init__(self, mndt_id: str, **kwargs):
+        self.mndt_id = mndt_id
         for attr in self.__slots__:
-            if attr == "mndtId":
+            if attr == "mndt_id":
                 continue
             setattr(self, attr, kwargs.get(attr, None))
 

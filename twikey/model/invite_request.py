@@ -106,6 +106,7 @@ class InviteRequest:
                     retval[key] = value
         return retval
 
+
 class InviteResponse:
     __slots__ = ["url", "key", "mndtId"]
 

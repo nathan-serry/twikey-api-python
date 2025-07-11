@@ -53,7 +53,7 @@ class SignRequest(InviteRequest):
         return retval
 
 class SignResponse:
-    __slots__ = ["url", "MndtId"]
+    __slots__ = ["MndtId"]
 
     def __init__(self, **kwargs):
         for attr in self.__slots__:
@@ -61,5 +61,5 @@ class SignResponse:
 
     def __str__(self):
         return (
-            f"InviteResponse: MndtId {self.MndtId}: url={self.url} \n"
+            f"MndtId {self.MndtId}\n"
         )

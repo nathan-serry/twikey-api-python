@@ -3,15 +3,18 @@ class PdfUploadRequest:
     PdfUploadRequest holds the parameters to upload a PDF for a mandate via the Twikey API.
 
     Attributes:
-        mndtId (str): Mandate reference (Twikey internal ID). Required.
+        mndt_id (str): Mandate reference (Twikey internal ID). Required.
+        pdf_path (str): Path to the pdf you want to upload. Required
         bankSignature (str, optional): Includes the bank signature, typically "true" or "false". Defaults to "true".
     """
 
-    __slots__ = ["mndtId", "bankSignature"]
+    __slots__ = ["mndt_id", "pdf_path", "bank_signature"]
 
-    def __init__(self, mndtId: str, bankSignature: str = "true"):
-        self.mndtId = mndtId
-        self.bankSignature = bankSignature
+    def __init__(self, mndt_id: str, pdf_path: str, bank_signature: bool = "true"):
+        self.mndt_id = mndt_id
+        self.pdf_path = pdf_path
+        self.bank_signature = bank_signature
+
 
     def to_request(self) -> dict:
         """
@@ -21,7 +24,7 @@ class PdfUploadRequest:
         Returns:
             dict: Dictionary of parameters for the PDF upload request.
         """
-        retval = {"mndtId": self.mndtId}
-        if self.bankSignature is not None:
-            retval["bankSignature"] = self.bankSignature
+        retval = {"mndtId": self.mndt_id, "pdfPath": self.pdf_path}
+        if self.bank_signature is not None:
+            retval["bankSignature"] = self.bank_signature
         return retval

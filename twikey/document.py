@@ -1,12 +1,18 @@
 import logging
 
 import requests
-from .model.invite_request import InviteRequest,InviteResponse
-from .model.fetch_request import FetchMandateRequest, FetchResponse
-from .model.sign_request import SignRequest,SignResponse
-from .model.actions_request import MandateActionRequest
 
-class Document(object):
+from .model.actions_request import MandateActionRequest
+from .model.customer_access import CustomerAccessRequest, CustomerAccessResponse
+from .model.fetch_request import FetchMandateRequest, Document
+from .model.invite_request import InviteRequest, InviteResponse
+from .model.pdf_retrieve_request import PdfRetrieveRequest, PdfResponse
+from .model.pdf_upload_request import PdfUploadRequest
+from .model.query_request import QueryMandateRequest, QueryMandateResponse
+from .model.sign_request import SignRequest, SignResponse
+from .model.update_request import UpdateMandateRequest
+
+class DocumentService(object):
     def __init__(self, client) -> None:
         super().__init__()
         self.client = client
@@ -44,7 +50,7 @@ class Document(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Sign", e)
 
-    def fetch(self, request: FetchMandateRequest) -> FetchResponse:
+    def fetch(self, request: FetchMandateRequest) -> Document:
         data = request.to_request()
         url = self.client.instance_url("/mandate/detail")
         try:
@@ -57,9 +63,31 @@ class Document(object):
             json_response = response.json()
             json_response["headers"] = response.headers
             self.logger.debug("Mandate details : %s" % json_response)
-            return FetchResponse(**json_response)
+            return Document(mandate=json_response.get("Mndt"), headers=json_response.get("headers"))
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("detail", e)
+
+    def query(self, request: QueryMandateRequest) -> list:
+        data = request.to_request()
+        url = self.client.instance_url("/mandate/query")
+        try:
+            self.client.refresh_token_if_required()
+            response = requests.get(
+                url=url,
+                params=data,
+                headers=self.client.headers(),
+                timeout=15,
+            )
+            if "ApiErrorCode" in response.headers:
+                raise self.client.raise_error("query", response)
+
+            json_response = response.json()
+            contracts_data = json_response.get("Contracts", [])
+            self.logger.debug("Mandate query result: %s" % json_response)
+            return [QueryMandateResponse(contract) for contract in contracts_data]
+        except requests.exceptions.RequestException as e:
+            raise self.client.raise_error_from_request("query", e)
+
 
     def action(self, request: MandateActionRequest):
         data = request.to_request()
@@ -71,17 +99,12 @@ class Document(object):
             )
             if "ApiErrorCode" in response.headers:
                 raise self.client.raise_error("action", response)
-            # json_response = {}
-            if response.text == "":
-                return "204"
-            else:
-                return response.json()
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("detail", e)
 
-    def update(self, data):
+    def update(self, request: UpdateMandateRequest):
         url = self.client.instance_url("/mandate/update")
-        data = data or {}
+        data = request.to_request()
         try:
             self.client.refresh_token_if_required()
             response = requests.post(
@@ -107,10 +130,6 @@ class Document(object):
             )
             if "ApiErrorCode" in response.headers:
                 raise self.client.raise_error("Cancel", response)
-            if response.text == "":
-                return "204"
-            else:
-                return response.json()
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Cancel", e)
 
@@ -182,6 +201,40 @@ class Document(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Mandate feed", e)
 
+    def upload_pdf(self, request: PdfUploadRequest):
+        data = request.to_request()
+        url = self.client.instance_url(f"/mandate/pdf?mndtId={data.get('mndtId')}&bankSignature={data.get('bankSignature')}")
+        try:
+            self.client.refresh_token_if_required()
+            with open(data.get('pdfPath'), "rb") as file:
+                response = requests.post(
+                    url=url, data=file, headers=self.client.headers('application/pdf'), timeout=15
+                )
+            if "ApiErrorCode" in response.headers:
+                raise self.client.raise_error("pdf", response)
+        except requests.exceptions.RequestException as e:
+            raise self.client.raise_error_from_request("detail", e)
+
+    def retrieve_pdf(self, request: PdfRetrieveRequest) -> PdfResponse:
+        data = request.to_request()
+        url = self.client.instance_url(f"/mandate/pdf?mndtId={data.get('mndtId')}")
+        try:
+            self.client.refresh_token_if_required()
+            response = requests.get(
+                url=url, headers=self.client.headers(), timeout=15
+            )
+            if "ApiErrorCode" in response.headers:
+                raise self.client.raise_error("pdf", response)
+            filename = None
+            if "Content-Disposition" in response.headers:
+                disposition = response.headers["Content-Disposition"]
+                parts = disposition.split("=")
+                if len(parts) == 2:
+                    filename = parts[1].strip().strip('"')
+            return PdfResponse(content=response.content, filename=filename)
+        except requests.exceptions.RequestException as e:
+            raise self.client.raise_error_from_request("detail", e)
+
     def update_customer(self, customer_id, data):
         url = self.client.instance_url("/customer/" + str(customer_id))
         try:
@@ -194,39 +247,57 @@ class Document(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Update customer", e)
 
+    def customer_access(self, request: CustomerAccessRequest) -> CustomerAccessResponse:
+        data = request.to_request()
+        url = self.client.instance_url("/customeraccess")
+        try:
+            self.client.refresh_token_if_required()
+            response = requests.post(
+                url=url, data=data, headers=self.client.headers(), timeout=15
+            )
+            if "ApiErrorCode" in response.headers:
+                raise self.client.raise_error("Cancel", response)
+            return CustomerAccessResponse(**response.json())
+        except requests.exceptions.RequestException as e:
+            raise self.client.raise_error_from_request("customer access", e)
+
 
 class DocumentFeed:
     def start(self, position, number_of_updates):
         """
         Allow storing the start of the feed
-        :param position: position where the feed started
+        Useful for storing or logging the current feed position and the number of items
+        :param position: position where the feed started returned by the 'X-LAST' header
         :param number_of_updates: number of items in the feed
         """
         pass
 
-    def new_document(self, doc, evt_time):
+    def new_document(self, doc, evt_time) -> bool:
         """
         Handle a newly available document
-        :param doc: actual document
-        :param evt_time: time of creation
+        :param doc: actual document as a dictionary
+        :param evt_time: time of creation (ISO 8601 format)
+        :return: Return True if an error occurred else return False
         """
         pass
 
-    def updated_document(self, original_doc_number, doc, reason, evt_time):
+    def updated_document(self, original_doc_number, doc, reason, evt_time) -> bool:
         """
         Handle an update of a document
         :param original_doc_number: original reference to the document
-        :param doc: actual document
-        :param reason: reason of change
-        :param evt_time: time of creation
+        :param doc: actual document as a dictionary
+        :param reason: reason of change as a dictionary
+        :param evt_time: time of creation (ISO 8601 format)
+        :return: Return True if an error occurred else return False
         """
         pass
 
-    def cancelled_document(self, doc_number, reason, evt_time):
+    def cancelled_document(self, doc_number, reason, evt_time) -> bool:
         """
-        Handle an cancelled document
+        Handle a cancelled document
         :param doc_number: reference to the document
-        :param reason: reason of change
-        :param evt_time: time of creation
+        :param reason: reason of cancellation  as a dictionary
+        :param evt_time: time of creation (ISO 8601 format)
+        :return: Return True if an error occurred else return False
         """
         pass

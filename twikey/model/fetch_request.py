@@ -4,7 +4,7 @@ class FetchMandateRequest:
     the details of a specific mandate from the Twikey API.
 
     Attributes:
-        mndtId (str): Mandate reference (Twikey's internal ID). Required.
+        mndt_Id (str): Mandate reference (Twikey's internal ID). Required.
         force (bool, optional): If True, include non-signed mandate states in the response.
                                 Defaults to False.
     """
@@ -28,35 +28,66 @@ class FetchMandateRequest:
             retval["force"] = "true"
         return retval
 
-class FetchResponse:
-    __slots__ = ["MndtId", "State", "LclInstrm", "SeqTp", "Cdtr", "Dbtr", "DbtrAcct", "SignerMethod"]
+
+class Document:
+    __slots__ = [
+        "mandate_id", "state", "local_instream", "sequential_type", "sign_date",
+        "debtor_name", "debtor_street", "debtor_city", "debtor_zip", "debtor_country", "btw_nummer",
+        "country_of_residence", "debtor_email", "customer_number", "debtor_iban", "Debtor_bic", "debtor_bank",
+        "referenced_document", "supplementary_data"
+    ]
 
     def __init__(self, **kwargs):
-        Mndt = kwargs.get("Mndt", {})
-        self.MndtId = Mndt.get("MndtId")
-        self.State = kwargs.get("headers", {}).get("X-STATE")
-        self.LclInstrm = Mndt.get("LclInstrm")
-        self.SeqTp = Mndt.get("Ocrncs").get("SeqTp")
-        self.Cdtr = Mndt.get("Cdtr").get("Nm")
-        self.Dbtr = Mndt.get("Dbtr").get("Nm")
-        self.DbtrAcct = Mndt.get("DbtrAcct")
+        mndt = kwargs.get("mandate", {})
+        headers = kwargs.get("headers", {})
 
+        self.mandate_id = mndt.get("MndtId")
+        self.state = headers.get("X-STATE")
+        self.local_instream = mndt.get("LclInstrm")
 
-        # Extract 'SignerMethod' from SplmtryData
-        supp_data = Mndt.get("SplmtryData", [])
-        for item in supp_data:
-            if item.get("Key") == "SignerMethod#0":
-                self.SignerMethod = item.get("Value")
-            else:
-                self.SignerMethod = None
+        ocrncs = mndt.get("Ocrncs", {})
+        self.sequential_type = ocrncs.get("SeqTp")
+        self.sign_date = ocrncs.get("Drtn", {}).get("FrDt")
+
+        dbtr = mndt.get("Dbtr", {})
+        addr = dbtr.get("PstlAdr", {})
+        ctct = dbtr.get("CtctDtls", {})
+
+        self.debtor_name = dbtr.get("Nm")
+        self.debtor_street = addr.get("AdrLine")
+        self.debtor_city = addr.get("TwnNm")
+        self.debtor_zip = addr.get("PstCd")
+        self.debtor_country = addr.get("Ctry")
+        self.btw_nummer = dbtr.get("Id")
+        self.country_of_residence = dbtr.get("CtryOfRes")
+        self.debtor_email = ctct.get("EmailAdr")
+        self.customer_number = ctct.get("Othr")
+
+        self.debtor_iban = mndt.get("DbtrAcct")
+
+        agent = mndt.get("DbtrAgt", {}).get("FinInstnId", {})
+        self.Debtor_bic = agent.get("BICFI")
+        self.debtor_bank = agent.get("Nm")
+
+        self.referenced_document = mndt.get("RfrdDoc")
+
+        # Convert SplmtryData into a dict for easier use
+        self.supplementary_data = {
+            item["Key"]: item["Value"]
+            for item in mndt.get("SplmtryData", [])
+        }
 
     def __str__(self):
-        return (
-            f"MndtId {self.MndtId}: State {self.State} \n"
-            f"LclInstrm={self.LclInstrm} \n"
-            f"SeqTp={self.SeqTp} \n"
-            f"Cdtr={self.Cdtr} \n"
-            f"Dbtr={self.Dbtr} \n"
-            f"DbtrAcct={self.DbtrAcct} \n"
-            f"SignerMethod={self.SignerMethod}"
+
+        base_info = "\n".join(
+            f"{slot:<22}: {getattr(self, slot, None)}" for slot in self.__slots__ if slot != "supplementary_data"
         )
+
+        supp_info = "Supplimentary Data\n\n"
+        for key, value in self.supplementary_data.items():
+            supp_info += f"{key:<22}: {value}\n"
+
+        return base_info + "\n\n" + supp_info
+
+    def __repr__(self):
+        return self.__str__()

@@ -4,7 +4,7 @@ import logging
 
 import requests
 
-from .document import Document
+from .document import DocumentService
 from .invoice import Invoice
 from .paylink import Paylink
 from .transaction import Transaction
@@ -38,7 +38,7 @@ class TwikeyClient(object):
         self.private_key = private_key
         self.api_base = base_url
         self.merchant_id = 0
-        self.document = Document(self)
+        self.document = DocumentService(self)
         self.transaction = Transaction(self)
         self.paylink = Paylink(self)
         self.invoice = Invoice(self)

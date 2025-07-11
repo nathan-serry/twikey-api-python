@@ -4,13 +4,14 @@ class CustomerAccessRequest:
     customer access to their mandate via the Twikey API.
 
     Attributes:
-        mndtId (str): Mandate reference (Twikey internal ID). Required.
+        mndt_id (str): Mandate reference (Twikey internal ID). Required.
     """
 
-    __slots__ = ["mndtId"]
+    __slots__ = ["mndt_id"]
 
-    def __init__(self, mndtId: str):
-        self.mndtId = mndtId
+    def __init__(self, mndt_id: str):
+        self.mndt_id = mndt_id
+
 
     def to_request(self) -> dict:
         """
@@ -20,4 +21,15 @@ class CustomerAccessRequest:
         Returns:
             dict: Dictionary containing the mandate reference.
         """
-        return {"mndtId": self.mndtId}
+        return {"mndtId": self.mndt_id}
+
+
+class CustomerAccessResponse:
+    __slots__ = ["token", "url"]
+
+    def __init__(self, **kwargs):
+        for attr in self.__slots__:
+            setattr(self, attr, kwargs.get(attr))
+
+    def __str__(self):
+        return f"InviteResponse url={self.url}, token={self.token}"
