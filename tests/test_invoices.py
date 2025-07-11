@@ -41,8 +41,30 @@ class TestInvoices(unittest.TestCase):
                     country="BE",
                     l="nl",
                     mobile="32498665995",
-                )
+                ),
                 # "pdf": "JVBERi0xLj....RU9GCg=="
+                lines=[
+                    LineItem(
+                        code="A100",
+                        description="Gymnastiekpakje maat M",
+                        quantity=1,
+                        uom="st",
+                        unitprice=41.32,
+                        vatcode="21",
+                        vatsum=8.68,
+                        vatrate=21.0,
+                    ),
+                    LineItem(
+                        code="A101",
+                        description="Springtouw",
+                        quantity=2,
+                        uom="st",
+                        unitprice=20.66,
+                        vatcode="21",
+                        vatsum=8.68,
+                        vatrate=21.0,
+                    )
+                ]
             )
         )
         self.assertIsNotNone(invoice)

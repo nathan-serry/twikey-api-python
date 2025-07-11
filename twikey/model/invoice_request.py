@@ -143,7 +143,7 @@ class LineItem:
         vatsum (float): VAT amount.
     """
     __slots__ = [
-        "code", "description", "quantity", "uom", "unitprice", "vatcode", "vatsum"
+        "code", "description", "quantity", "uom", "unitprice", "vatcode", "vatsum", "vatrate"
     ]
 
     _field_map = {
@@ -154,6 +154,7 @@ class LineItem:
         "unitprice": "unitprice",
         "vatcode": "vatcode",
         "vatsum": "vatsum",
+        "vatrate": "vatrate",
     }
 
     def __init__(self, **kwargs):
