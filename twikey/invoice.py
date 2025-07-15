@@ -2,6 +2,9 @@ import logging
 
 import requests
 
+from twikey.model.invoice_request import *
+from twikey.model.invoice_response import *
+
 
 class Invoice(object):
     def __init__(self, client) -> None:
@@ -9,9 +12,9 @@ class Invoice(object):
         self.client = client
         self.logger = logging.getLogger(__name__)
 
-    def create(self, data, origin=False, purpose=False, manual=False):
+    def create(self, request: InvoiceRequest, origin=False, purpose=False, manual=False):
         url = self.client.instance_url("/invoice")
-        data = data or {}
+        data = request.to_request()
         try:
             self.client.refresh_token_if_required()
             headers = self.client.headers("application/json")
@@ -31,13 +34,13 @@ class Invoice(object):
             if "ApiErrorCode" in response.headers:
                 raise self.client.raise_error("Create invoice", response)
             self.logger.debug("Added invoice : %s" % json_response["url"])
-            return json_response
+            return InvoiceCreatedResponse(**json_response)
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Create invoice", e)
 
-    def update(self, invoice_id, data):
-        url = self.client.instance_url("/invoice/" + invoice_id)
-        data = data or {}
+    def update(self, request: UpdateInvoiceRequest) -> InvoiceResponse:
+        data = request.to_request()
+        url = self.client.instance_url("/invoice/" + data.get("id"))
         try:
             self.client.refresh_token_if_required()
             headers = self.client.headers("application/json")
@@ -46,9 +49,167 @@ class Invoice(object):
             if "ApiErrorCode" in response.headers:
                 raise self.client.raise_error("Update invoice", response)
             self.logger.debug("Updated invoice : %s" % json_response["url"])
-            return json_response
+            return InvoiceResponse(**json_response)
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Update invoice", e)
+
+    def details(self, request: DetailsRequest) -> InvoiceResponse:
+        """
+        Retrieves the details of a specific invoice by ID or number,
+        optionally including lastpayment, meta, or customer data.
+        """
+        data = request.to_request()
+        url = self.client.instance_url(f"/invoice/{request.id}")
+        includes = data.get("include")
+        if includes:
+            query_string = "&".join(f"include={param}" for param in includes)
+            url += f"?{query_string}"
+        try:
+            self.client.refresh_token_if_required()
+            headers = self.client.headers("application/json")
+            response = requests.get(url=url, headers=headers, timeout=15)
+            if "ApiErrorCode" in response.headers:
+                raise self.client.raise_error("details invoice", response)
+            self.logger.debug("details invoice: %s", response.text)
+            return InvoiceResponse(**response.json())
+        except requests.exceptions.RequestException as e:
+            raise self.client.raise_error_from_request("details invoice", e)
+
+    def action(self, request: ActionRequest):
+        """
+        Performs an action on a specific invoice.
+
+        Args:
+            request (InvoiceActionRequest): The action request with invoice ID and type.
+
+        Supported types:
+            'email', 'sms', 'reminder', 'smsreminder',
+            'letter', 'letterWithInvoice', 'invoice',
+            'reoffer', 'peppol'
+        """
+        invoice_id = request.id
+        url = self.client.instance_url(f"/invoice/{invoice_id}/action")
+        payload = request.to_request()
+        try:
+            self.client.refresh_token_if_required()
+            headers = self.client.headers("application/x-www-form-urlencoded")
+            response = requests.post(url=url, data=payload, headers=headers, timeout=15)
+            if response.status_code != 204:
+                raise self.client.raise_error("action invoice", response)
+            self.logger.debug("action invoice [%s]: %s", invoice_id, payload["type"])
+        except requests.exceptions.RequestException as e:
+            raise self.client.raise_error_from_request("action invoice", e)
+
+    def upload_ubl(self, request: UblUploadRequest) -> InvoiceResponse:
+        """
+        Uploads a UBL invoice (XML) to Twikey.
+
+        Args:
+            request (UblUploadRequest): The UBL upload request containing the XML payload
+                and optional headers like X-MANUAL and X-INVOICE-ID.
+
+        Returns:
+            UblUploadResponse: Parsed invoice response object.
+
+        Raises:
+            TwikeyError: If Twikey returns an error or network fails.
+        """
+        url = self.client.instance_url("/invoice/ubl")
+        try:
+            self.client.refresh_token_if_required()
+            headers = self.client.headers("application/x-www-form-urlencoded")
+            headers.update(request.to_headers())
+            with open(request.xml_path, "rb") as file:
+                response = requests.post(
+                    url=url,
+                    headers=headers,
+                    data=file,
+                    timeout=15
+                )
+            if response.status_code != 200:
+                raise self.client.raise_error("UBL upload", response)
+            self.logger.debug("UBL upload response: %s", response.text)
+            return InvoiceResponse(**response.json())
+        except requests.exceptions.RequestException as e:
+            raise self.client.raise_error_from_request("UBL upload", e)
+
+    def delete(self, request: DeleteRequest):
+        data = request.to_request()
+        url = self.client.instance_url("/invoice/" + data.get("id"))
+        try:
+            self.client.refresh_token_if_required()
+            headers = self.client.headers("application/json")
+            response = requests.delete(url=url, headers=headers, timeout=15)
+            if "ApiErrorCode" in response.headers:
+                raise self.client.raise_error("delete invoice", response)
+            self.logger.debug("delete invoice : %s")
+        except requests.exceptions.RequestException as e:
+            raise self.client.raise_error_from_request("delete invoice", e)
+
+    def bulk_create(self, request: BulkInvoiceRequest):
+        """
+        Creates multiple invoices in a single batch upload.
+
+        Args:
+            request (BulkInvoiceRequest): A list of invoice requests.
+
+        Returns:
+            BulkInvoiceResponse: Contains the batchId of the created batch.
+
+        Raises:
+            TwikeyError: If the bulk creation fails or the server returns an error.
+        """
+        url = self.client.instance_url("/invoice/bulk")
+        try:
+            self.client.refresh_token_if_required()
+            headers = self.client.headers("application/json")
+            data = request.to_request()
+            response = requests.post(
+                url=url,
+                headers=headers,
+                json=data,
+                timeout=30
+            )
+            if response.status_code != 200:
+                raise self.client.raise_error("bulk create invoices", response)
+            self.logger.debug("bulk create invoices response: %s", response.text)
+            return BulkInvoiceResponse(**response.json())
+        except requests.exceptions.RequestException as e:
+            raise self.client.raise_error_from_request("bulk create invoices", e)
+
+    def bulk_details(self, request: BulkBatchDetailsRequest):
+        """
+        Retrieves the result of a bulk invoice upload by batch ID.
+
+        Args:
+            request (BulkBatchDetailsRequest): The request containing the batch ID.
+
+        Returns:
+            BulkBatchDetailsResponse: Contains a list of statuses per invoice.
+
+        Raises:
+            TwikeyError: If the request fails or returns an unexpected status.
+        """
+        params = request.to_request()
+        url = self.client.instance_url(f"/invoice/bulk?batchId={params.get('batchId')}")
+        try:
+            self.client.refresh_token_if_required()
+            headers = self.client.headers("application/json")
+            response = requests.get(
+                url=url,
+                headers=headers,
+                timeout=15
+            )
+            if response.status_code == 409:
+                self.logger.debug("bulk batch still processing: %s", request.batch_id)
+                return None
+            elif response.status_code == 200:
+                self.logger.debug("bulk batch details response: %s", response.text)
+                return BulkBatchDetailsResponse(response.json())
+            else:
+                raise self.client.raise_error("bulk batch details", response)
+        except requests.exceptions.RequestException as e:
+            raise self.client.raise_error_from_request("bulk batch details", e)
 
     def feed(self, invoice_feed, start_position=False, *includes):
         _includes = ""
