@@ -84,7 +84,7 @@ class TestDocument(unittest.TestCase):
                 place="Brussels",
             )
         )
-        print("signed Response:", signed_mandate)
+        # print("signed Response:", signed_mandate)
         self.assertIsNotNone(signed_mandate)
         self.assertIsNotNone(signed_mandate.MndtId)
 
@@ -115,8 +115,50 @@ class TestDocument(unittest.TestCase):
 
     # @unittest.skip("cancelling random document over and over")
     def test_cancel(self):
-        cancelled_mandate = self._twikey.document.cancel(
-            "MN543210",
+        signed_mandate = self._twikey.document.sign(
+            SignRequest(
+                ct="772",
+                l="en",
+                iban="BE51561419613262",
+                bic="GKCCBEBB",
+                customer_number="CUST001",
+                email="joe.doe@gmail.com",
+                last_name="Doe",
+                first_name="John",
+                mobile="+32499000001",
+                address="Main Street 1",
+                city="Brussels",
+                zip="1000",
+                country="BE",
+                company_name="Acme Corp",
+                vat_no="BE0123456789",
+                campaign="Summer2025",
+                prefix="Mr.",
+                check=True,
+                ed="2025-07-31",
+                reminder_days=3,
+                send_invite=False,
+                token="abc123token",
+                require_validation=False,
+                transaction_amount=49.95,
+                transaction_message="Welcome fee",
+                transaction_ref="TXN001",
+                plan="monthly",
+                subscription_start="2025-08-01",
+                subscription_recurrence="1m",
+                subscription_stop_after=12,
+                subscription_amount=9.99,
+                subscription_message="Monthly membership",
+                subscription_ref="SUB001",
+                method=SignMethod.ITSME,
+                # sign_date="2025-07-03T14:21:45",
+                place="Brussels",
+            )
+        )
+        self.assertIsNotNone(signed_mandate)
+
+        self._twikey.document.cancel(
+            signed_mandate.MndtId,
             "hello",
         )
 
@@ -156,9 +198,51 @@ class TestDocument(unittest.TestCase):
 
     # @unittest.skip("already signed over and over = reason for skipping")
     def test_upload_pdf(self):
-        uploaded_pdf = self._twikey.document.upload_pdf(
+        signed_mandate = self._twikey.document.sign(
+            SignRequest(
+                ct="772",
+                l="en",
+                iban="BE51561419613262",
+                bic="GKCCBEBB",
+                customer_number="CUST001",
+                email="joe.doe@gmail.com",
+                last_name="Doe",
+                first_name="John",
+                mobile="+32499000001",
+                address="Main Street 1",
+                city="Brussels",
+                zip="1000",
+                country="BE",
+                company_name="Acme Corp",
+                vat_no="BE0123456789",
+                campaign="Summer2025",
+                prefix="Mr.",
+                check=True,
+                ed="2025-07-31",
+                reminder_days=3,
+                send_invite=False,
+                token="abc123token",
+                require_validation=False,
+                transaction_amount=49.95,
+                transaction_message="Welcome fee",
+                transaction_ref="TXN001",
+                plan="monthly",
+                subscription_start="2025-08-01",
+                subscription_recurrence="1m",
+                subscription_stop_after=12,
+                subscription_amount=9.99,
+                subscription_message="Monthly membership",
+                subscription_ref="SUB001",
+                method=SignMethod.ITSME,
+                # sign_date="2025-07-03T14:21:45",
+                place="Brussels",
+            )
+        )
+        self.assertIsNotNone(signed_mandate)
+
+        self._twikey.document.upload_pdf(
             PdfUploadRequest(
-                mndt_id="CORERECURRENTNL17229",
+                mndt_id=signed_mandate.MndtId,
                 pdf_path="/Users/nathanserry/Downloads/dummy.pdf",
                 bank_signature=False,
             )
@@ -177,9 +261,51 @@ class TestDocument(unittest.TestCase):
 
     # @unittest.skip("reason for skipping")
     def test_customer_access(self):
+        signed_mandate = self._twikey.document.sign(
+            SignRequest(
+                ct="772",
+                l="en",
+                iban="BE51561419613262",
+                bic="GKCCBEBB",
+                customer_number="CUST001",
+                email="joe.doe@gmail.com",
+                last_name="Doe",
+                first_name="John",
+                mobile="+32499000001",
+                address="Main Street 1",
+                city="Brussels",
+                zip="1000",
+                country="BE",
+                company_name="Acme Corp",
+                vat_no="BE0123456789",
+                campaign="Summer2025",
+                prefix="Mr.",
+                check=True,
+                ed="2025-07-31",
+                reminder_days=3,
+                send_invite=False,
+                token="abc123token",
+                require_validation=False,
+                transaction_amount=49.95,
+                transaction_message="Welcome fee",
+                transaction_ref="TXN001",
+                plan="monthly",
+                subscription_start="2025-08-01",
+                subscription_recurrence="1m",
+                subscription_stop_after=12,
+                subscription_amount=9.99,
+                subscription_message="Monthly membership",
+                subscription_ref="SUB001",
+                method=SignMethod.IMPORT,
+                # sign_date="2025-07-03T14:21:45",
+                place="Brussels",
+            )
+        )
+        self.assertIsNotNone(signed_mandate)
+
         access_url = self._twikey.document.customer_access(
             CustomerAccessRequest(
-                mndt_id="MN543210"
+                mndt_id=signed_mandate.MndtId
             )
         )
         # print("url:", access_url)
@@ -187,7 +313,8 @@ class TestDocument(unittest.TestCase):
 
     # @unittest.skip("reason for skipping")
     def test_feed(self):
-        print(self._twikey.document.feed(MyDocumentFeed()))
+        feed = self._twikey.document.feed(MyDocumentFeed())
+        # print(feed)
 
 
 class MyDocumentFeed(twikey.DocumentFeed):
