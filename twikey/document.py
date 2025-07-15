@@ -2,12 +2,8 @@ import logging
 
 import requests
 
-from twikey.model import (
-    InviteRequest, FetchMandateRequest, Document, SignRequest, MandateActionRequest, UpdateMandateRequest,
-    PdfRetrieveRequest, PdfUploadRequest, CustomerAccessRequest, QueryMandateRequest, InviteResponse, SignResponse,
-    QueryMandateResponse, PdfResponse, CustomerAccessResponse
-)
-
+from twikey.model.document_request import *
+from twikey.model.document_response import *
 
 class DocumentService(object):
     def __init__(self, client) -> None:
@@ -34,6 +30,8 @@ class DocumentService(object):
     def sign(self, request: SignRequest) -> SignResponse:  # pylint: disable=W8106
         url = self.client.instance_url("/sign")
         data = request.to_request()
+        if request.method:
+            data["method"] = request.method.value
         try:
             self.client.refresh_token_if_required()
             response = requests.post(

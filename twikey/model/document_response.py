@@ -1,34 +1,3 @@
-class FetchMandateRequest:
-    """
-    FetchMandateRequest holds the parameters required to fetch
-    the details of a specific mandate from the Twikey API.
-
-    Attributes:
-        mndt_Id (str): Mandate reference (Twikey's internal ID). Required.
-        force (bool, optional): If True, include non-signed mandate states in the response.
-                                Defaults to False.
-    """
-
-    __slots__ = ["mndt_id", "force"]
-
-    def __init__(self, mndt_id: str, force: bool = False):
-        self.mndt_id = mndt_id
-        self.force = force
-
-    def to_request(self) -> dict:
-        """
-        Converts the FetchMandateRequest object to a dictionary
-        suitable for sending as query parameters in the Twikey API.
-
-        Returns:
-            dict: Dictionary with keys mapped to API parameters.
-        """
-        retval = {"mndtId": self.mndt_id}
-        if self.force:
-            retval["force"] = "true"
-        return retval
-
-
 class Document:
     __slots__ = [
         "mandate_id", "state", "local_instream", "sequential_type", "sign_date",
@@ -91,3 +60,73 @@ class Document:
 
     def __repr__(self):
         return self.__str__()
+
+
+class InviteResponse:
+    __slots__ = ["url", "key", "mndtId"]
+
+    def __init__(self, **kwargs):
+        for attr in self.__slots__:
+            setattr(self, attr, kwargs.get(attr))
+
+    def __str__(self):
+        return f"InviteResponse url={self.url}, key={self.key}, mndtId={self.mndtId}"
+
+
+class SignResponse:
+    __slots__ = ["MndtId"]
+
+    def __init__(self, **kwargs):
+        for attr in self.__slots__:
+            setattr(self, attr, kwargs.get(attr))
+
+    def __str__(self):
+        return (
+            f"MndtId {self.MndtId}\n"
+        )
+
+
+class QueryMandateResponse:
+    __slots__ = [
+        "id", "type", "state", "suspended", "pdf_available", "mandate_number",
+        "contract_number", "ct", "sign_date", "iban", "bic"
+    ]
+
+    def __init__(self, data: dict):
+        for key in self.__slots__:
+            if "_" in key:
+                prefix, suffix = key.split("_")
+                datakey = f"{prefix}{suffix.title()}"
+                setattr(self, key, data.get(datakey))
+            else:
+                setattr(self, key, data.get(key))
+
+    def __str__(self):
+        return "\n".join(f"{slot:<18}: {getattr(self, slot, None)}" for slot in self.__slots__)
+
+
+class PdfResponse:
+    def __init__(self, content: bytes, filename: str = None, content_type: str = "application/pdf"):
+        self.content = content
+        self.content_type = content_type
+        self.filename = filename or "mandate.pdf"
+
+    def save(self, path: str = None):
+        path = path or self.filename
+        with open(path, "wb") as f:
+            f.write(self.content)
+        return path
+
+    def __str__(self):
+        return f"PdfResponse(filename='{self.filename}', size={len(self.content)} bytes)"
+
+
+class CustomerAccessResponse:
+    __slots__ = ["token", "url"]
+
+    def __init__(self, **kwargs):
+        for attr in self.__slots__:
+            setattr(self, attr, kwargs.get(attr))
+
+    def __str__(self):
+        return f"InviteResponse url={self.url}, token={self.token}"
