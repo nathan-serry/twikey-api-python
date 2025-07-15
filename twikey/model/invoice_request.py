@@ -1,3 +1,6 @@
+from enum import Enum
+
+
 class InvoiceRequest:
     """
     InvoiceRequest holds the full set of fields used to create an invoice via the Twikey API.
@@ -170,27 +173,228 @@ class LineItem:
                 data[key] = value
         return data
 
-class InvoiceCreatedResponse:
-    """
-    InvoiceResponse maps the response from the Twikey API after creating an invoice.
 
-    Attributes:
-        id (str): Unique identifier of the invoice.
-        number (str): Invoice number.
-        title (str): Title or message associated with the invoice.
-        ct (int): Contract template ID.
-        amount (float): Amount billed.
-        date (str): Invoice creation date.
-        duedate (str): Invoice due date.
-        status (str): Status of the invoice (e.g., 'BOOKED').
-        url (str): URL to view the invoice.
+class UpdateInvoiceRequest:
     """
+        InvoiceRequest represents the data required to create or manage an invoice via the Twikey API.
 
-    __slots__ = ["id", "number", "title", "ct", "amount", "date", "duedate", "status", "url"]
+        Attributes:
+            id (str): id of the invoice
+            title (str): Title of the invoice.
+            date (str): Invoice date in format YYYY-MM-DD. (required)
+            duedate (str): Invoice due date in format YYYY-MM-DD. (required)
+            ref (str): Invoice reference (internal or external).
+            pdf (str): Base64-encoded PDF document.
+            status (str): Optional status of the invoice. Can be "booked", "archived", or "paid".
+            extra (dict or str): Custom attributes to be passed with the invoice.
+        """
+
+    __slots__ = ["id", "title", "date", "duedate", "ref", "pdf", "status", "extra", ]
+
+    _field_map = {
+        "id": "id",
+        "title": "title",
+        "date": "date",
+        "duedate": "duedate",
+        "ref": "ref",
+        "pdf": "pdf",
+        "status": "state",
+        "extra": "extra",
+    }
 
     def __init__(self, **kwargs):
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
 
-    def __str__(self):
-        return "\n".join(f"{attr:<10}: {getattr(self, attr, None)}" for attr in self.__slots__)
+    def to_request(self) -> dict:
+        """
+        Converts the InvoiceRequest instance into a dictionary ready to be sent to the API.
+
+        Returns:
+            dict: Dictionary representation with appropriate field mappings and conversions.
+        """
+        retval = {}
+        for attr in self.__slots__:
+            value = getattr(self, attr, None)
+            if value is not None and value != "":
+                key = self._field_map.get(attr, attr)
+                retval[key] = value
+        return retval
+
+
+class DeleteRequest:
+    """
+    DeleteInvoiceRequest bevat enkel het ID van de factuur die verwijderd moet worden.
+
+    Attributes:
+        id (str): UUID van de factuur die verwijderd moet worden. (required)
+    """
+
+    __slots__ = ["id"]
+
+    def __init__(self, **kwargs):
+        self.id = kwargs.get("id")
+
+    def to_request(self) -> dict:
+        """
+        Zet de DeleteInvoiceRequest om naar een dictionary geschikt voor API-verzending.
+
+        Returns:
+            dict: De request payload met juiste veldnamen.
+        """
+        retval = {}
+        if self.id is not None and self.id != "":
+            retval["id"] = self.id
+        return retval
+
+
+class DetailsRequest:
+    """
+    InvoiceDetailsRequest is used to request the details of a specific invoice.
+
+    Attributes:
+        id (str): The unique invoice ID or invoice number. (required)
+        include_lastpayment (bool): Whether to include last payment info.
+        include_meta (bool): Whether to include invoice metadata.
+        include_customer (bool): Whether to include full customer info.
+    """
+
+    __slots__ = ["id", "include_lastpayment", "include_meta", "include_customer"]
+
+    def __init__(self, **kwargs):
+        self.id = kwargs.get("id")
+        self.include_lastpayment = kwargs.get("include_lastpayment", False)
+        self.include_meta = kwargs.get("include_meta", False)
+        self.include_customer = kwargs.get("include_customer", False)
+
+    def to_request(self) -> dict:
+        """
+        Returns the GET parameters to include in the API request.
+
+        Returns:
+            dict: Dictionary of query parameters (e.g. ?include=meta&include=lastpayment).
+        """
+        includes = []
+        if self.include_lastpayment:
+            includes.append("lastpayment")
+        if self.include_meta:
+            includes.append("meta")
+        if self.include_customer:
+            includes.append("customer")
+
+        return {"include": includes} if includes else {}
+
+
+class ActionRequest:
+    """
+    Attributes:
+        id (str): UUID van de factuur die verwijderd moet worden. (required)
+
+    """
+
+    __slots__ = ["id", "type"]
+
+    def __init__(self, **kwargs):
+        self.id = kwargs.get("id")
+        self.type = kwargs.get("type")
+
+    def to_request(self) -> dict:
+        """
+        Zet de ActionRequest om naar een dictionary geschikt voor API-verzending.
+
+        Returns:
+            dict: De request payload met juiste veldnamen.
+        """
+        retval = {}
+        if self.id is not None and self.id != "":
+            retval["id"] = self.id
+        if self.type is not None and self.type != "":
+            retval["type"] = self.type.value
+        return retval
+
+
+class ActionType(Enum):
+    EMAIL = "email"
+    SMS = "sms"
+    REMINDER = "reminder"
+    SMSREMINDER = "smsreminder"
+    LETTER = "letter"
+    LETTERWITHINVOICE = "letterWithInvoice"
+    INVOICE = "invoice"
+    REOFFER = "reoffer"
+    PEPPOL = "peppol"
+    PAYMENTPLAN = "paymentplan"
+
+
+class UblUploadRequest:
+    """
+    UblUploadRequest represents the data needed to upload a UBL invoice to Twikey.
+
+    Attributes:
+        xml_content (str): The UBL invoice as a raw XML string. (required)
+        manual (bool): If True, disables automatic collection. Sets X-MANUAL: true.
+        invoice_id (str): Optional custom UUID for the invoice. Sets X-INVOICE-ID.
+    """
+
+    __slots__ = ["xml_path", "manual", "invoice_id"]
+
+    def __init__(self, **kwargs):
+        self.xml_path = kwargs.get("xml_path")  # required
+        self.manual = kwargs.get("manual", False)
+        self.invoice_id = kwargs.get("invoice_id")  # optional
+
+    def to_headers(self) -> dict:
+        headers = {
+            "Content-Type": "application/xml"
+        }
+        if self.manual:
+            headers["X-MANUAL"] = True
+        if self.invoice_id:
+            headers["X-INVOICE-ID"] = self.invoice_id
+        return headers
+
+
+class BulkInvoiceRequest:
+    """
+    BulkInvoiceRequest represents a list of invoice requests to be created in a single batch.
+
+    Attributes:
+        invoices (list[InvoiceRequest]): A list of InvoiceRequest objects.
+    """
+
+    __slots__ = ["invoices"]
+
+    def __init__(self, invoices: list[InvoiceRequest]):
+        self.invoices = invoices
+
+    def to_request(self) -> list:
+        """
+        Converts the bulk invoice request to a JSON array.
+
+        Returns:
+            list: A list of dictionaries representing each invoice request.
+        """
+        return [inv.to_request() for inv in self.invoices]
+
+
+class BulkBatchDetailsRequest:
+    """
+    BulkBatchDetailsRequest represents a request to retrieve the result of a bulk invoice upload.
+
+    Attributes:
+        batch_id (str): The batch ID returned by the bulk create endpoint.
+    """
+
+    __slots__ = ["batch_id"]
+
+    def __init__(self, batch_id: str):
+        self.batch_id = batch_id
+
+    def to_request(self) -> dict:
+        """
+        Converts the request to a dictionary suitable for use as query parameters.
+
+        Returns:
+            dict: Dictionary with 'batchId' as key.
+        """
+        return {"batchId": self.batch_id}
