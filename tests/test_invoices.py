@@ -20,7 +20,6 @@ class TestInvoices(unittest.TestCase):
             base_url = os.environ["TWIKEY_API_URL"]
         self._twikey = twikey.TwikeyClient(key, base_url)
 
-    # @unittest.skip("reason for skipping")
     def test_new_invite(self):
         invoice = self._twikey.invoice.create(
             InvoiceRequest(
@@ -70,10 +69,7 @@ class TestInvoices(unittest.TestCase):
             )
         )
         self.assertIsNotNone(invoice)
-        # print("New invoice to be paid @ " + invoice.url)
-        # print(invoice)
 
-    # @unittest.skip("reason for skipping")
     def test_update(self):
         invoice = self._twikey.invoice.update(
             UpdateInvoiceRequest(
@@ -85,17 +81,41 @@ class TestInvoices(unittest.TestCase):
             )
         )
         self.assertIsNotNone(invoice)
-        # print(invoice)
 
-    # @unittest.skip("reason for skipping")
     def test_delete(self):
+        invoice = self._twikey.invoice.create(
+            InvoiceRequest(
+                id=str(uuid.uuid4()),
+                number="Inv-" + str(round(time.time())),
+                title="Invoice " + date.today().strftime("%B"),
+                remittance="596843697521",
+                ct=1988,
+                amount=100,
+                date=(date.today() + timedelta(days=7)).isoformat(),
+                duedate=(date.today() + timedelta(days=14)).isoformat(),
+                customer=Customer(
+                    customerNumber="customer2",
+                    email="no-reply@twikey.com",
+                    firstname="Twikey",
+                    lastname="Support",
+                    address="Derbystraat 43",
+                    city="Gent",
+                    zip="9051",
+                    country="BE",
+                    l="en",
+                    mobile="32498665995",
+                ),
+                # "pdf": "JVBERi0xLj....RU9GCg=="
+            )
+        )
+        self.assertIsNotNone(invoice)
+
         self._twikey.invoice.delete(
             DeleteRequest(
-                id="50036995-d1fa-4a9a-91a4-2d6b84f6d6d9",
+                id=invoice.id,
             )
         )
 
-    # @unittest.skip("reason for skipping")
     def test_details(self):
         invoice = self._twikey.invoice.details(
             DetailsRequest(
@@ -106,9 +126,7 @@ class TestInvoices(unittest.TestCase):
             )
         )
         self.assertIsNotNone(invoice)
-        # print(invoice)
 
-    # @unittest.skip("reason for skipping")
     def test_action(self):
         self._twikey.invoice.action(
             request=ActionRequest(
@@ -117,7 +135,6 @@ class TestInvoices(unittest.TestCase):
             )
         )
 
-    # @unittest.skip("reason for skipping")
     def test_UBL_upload(self):
         new_invoice = self._twikey.invoice.upload_ubl(
             UblUploadRequest(
@@ -125,9 +142,7 @@ class TestInvoices(unittest.TestCase):
             )
         )
         self.assertIsNotNone(new_invoice)
-        # print(new_invoice)
 
-    # @unittest.skip("reason for skipping")
     def test_bulk_create_invoices(self):
         batch_invoices = self._twikey.invoice.bulk_create(
             BulkInvoiceRequest(
@@ -158,9 +173,7 @@ class TestInvoices(unittest.TestCase):
             )
         )
         self.assertIsNotNone(batch_invoices)
-        # print(batch_invoices)
 
-    # @unittest.skip("reason for skipping")
     def test_batch_details(self):
         batch_invoices = self._twikey.invoice.bulk_create(
             BulkInvoiceRequest(
@@ -186,12 +199,11 @@ class TestInvoices(unittest.TestCase):
                             mobile="32498665995",
                         ),
                     )
-                    for i in range(5)
+                    for i in range(2)
                 ]
             )
         )
         self.assertIsNotNone(batch_invoices)
-        # print(batch_invoices)
 
         batch_info = self._twikey.invoice.bulk_details(
             BulkBatchDetailsRequest(
@@ -199,9 +211,7 @@ class TestInvoices(unittest.TestCase):
             )
         )
         self.assertIsNotNone(batch_info)
-        # print(batch_info)
 
-    # @unittest.skip("reason for skipping")
     def test_feed(self):
         self._twikey.invoice.feed(MyFeed(), False, "meta", "include", "lastpayment")
 

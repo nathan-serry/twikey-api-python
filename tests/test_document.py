@@ -17,7 +17,6 @@ class TestDocument(unittest.TestCase):
         base_url = os.environ["TWIKEY_API_URL"]
         self._twikey = twikey.TwikeyClient(key, base_url)
 
-    # @unittest.skip("reason for skipping")
     def test_new_invite(self):
         ct = 1
         if "CT" in os.environ:
@@ -39,10 +38,8 @@ class TestDocument(unittest.TestCase):
                 bic="GKCCBEBB",
             )
         )
-        # print("invite:", invite)
         self.assertIsNotNone(invite)
 
-    # @unittest.skip("testing unsigned doc = reason for skipping")
     def test_sign(self):
         signed_mandate = self._twikey.document.sign(
             SignRequest(
@@ -84,11 +81,9 @@ class TestDocument(unittest.TestCase):
                 place="Brussels",
             )
         )
-        # print("signed Response:", signed_mandate)
         self.assertIsNotNone(signed_mandate)
         self.assertIsNotNone(signed_mandate.MndtId)
 
-    # @unittest.skip("reason for skipping")
     def test_fetch(self):
         fetched_mandate = self._twikey.document.fetch(
             FetchMandateRequest(
@@ -96,10 +91,8 @@ class TestDocument(unittest.TestCase):
                 force=True,
             )
         )
-        # print(f"fetching Response: \n{fetched_mandate}")
         self.assertIsNotNone(fetched_mandate)
 
-    # @unittest.skip("reason for skipping")
     def test_query(self):
         query = self._twikey.document.query(
             QueryMandateRequest(
@@ -108,12 +101,8 @@ class TestDocument(unittest.TestCase):
                 email="no-reply@twikey.com",
             )
         )
-        # for contract in query:
-        #     print("-" * 40)
-        #     print(contract)
         self.assertIsNotNone(query)
 
-    # @unittest.skip("cancelling random document over and over")
     def test_cancel(self):
         signed_mandate = self._twikey.document.sign(
             SignRequest(
@@ -162,7 +151,6 @@ class TestDocument(unittest.TestCase):
             "hello",
         )
 
-    # @unittest.skip("reason for skipping")
     def test_action(self):
         mandate_action = self._twikey.document.action(
             MandateActionRequest(
@@ -172,7 +160,6 @@ class TestDocument(unittest.TestCase):
             )
         )
 
-    # @unittest.skip("reason for skipping")
     def test_update(self):
         update = self._twikey.document.update(
             UpdateMandateRequest(
@@ -196,7 +183,6 @@ class TestDocument(unittest.TestCase):
             )
         )
 
-    # @unittest.skip("already signed over and over = reason for skipping")
     def test_upload_pdf(self):
         signed_mandate = self._twikey.document.sign(
             SignRequest(
@@ -248,18 +234,15 @@ class TestDocument(unittest.TestCase):
             )
         )
 
-    # @unittest.skip("reason for skipping")
     def test_retrieve_pdf(self):
         retrieved_pdf = self._twikey.document.retrieve_pdf(
             PdfRetrieveRequest(
                 mndt_id="CORERECURRENTNL17192"
             )
         )
-        # print("pdf retrieval:", retrieved_pdf)
         retrieved_pdf.save("/tmp/pdf.pdf")
         self.assertIsNotNone(retrieved_pdf)
 
-    # @unittest.skip("reason for skipping")
     def test_customer_access(self):
         signed_mandate = self._twikey.document.sign(
             SignRequest(
@@ -308,13 +291,10 @@ class TestDocument(unittest.TestCase):
                 mndt_id=signed_mandate.MndtId
             )
         )
-        # print("url:", access_url)
         self.assertIsNotNone(access_url)
 
-    # @unittest.skip("reason for skipping")
     def test_feed(self):
         feed = self._twikey.document.feed(MyDocumentFeed())
-        # print(feed)
 
 
 class MyDocumentFeed(twikey.DocumentFeed):
