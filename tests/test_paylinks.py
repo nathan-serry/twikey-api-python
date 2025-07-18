@@ -1,7 +1,7 @@
 import os
 import twikey
 import unittest
-
+from twikey.model.paylink_request import *
 
 class TestPaylinks(unittest.TestCase):
     _twikey = None
@@ -18,14 +18,62 @@ class TestPaylinks(unittest.TestCase):
 
     def test_new_invite(self):
         tx = self._twikey.paylink.create(
-            {
-                "email": "no-repy@twikey.com",
-                "message": "Test Message",
-                "ref": "Merchant Reference",
-                "amount": 10.00,
-            }
+            PaymentLinkRequest(
+                email="no-reply@twikey.com",
+                title="Test Message",
+                ref="Merchant Reference",
+                amount=10.00
+            )
+        )
+        self.assertIsNotNone(tx.id)
+        self.assertIsNotNone(tx.amount)
+        self.assertIsNotNone(tx.msg)
+        self.assertIsNotNone(tx.url)
+
+    def test_status(self):
+        tx = self._twikey.paylink.status_details(
+            StatusRequest(
+                id="644722"
+            )
         )
         self.assertIsNotNone(tx)
+        self.assertIsNotNone(tx.id)
+        self.assertIsNotNone(tx.amount)
+        self.assertIsNotNone(tx.msg)
+        self.assertIsNotNone(tx.state)
+
+    @unittest.skipIf("PAID_PAYLINK_ID" not in os.environ, "No PAID_PAYLINK_ID set")
+    def test_refund(self):
+        refund = self._twikey.paylink.refund(
+            RefundRequest(
+                id="PAID_PAYLINK_ID",
+                message="hello",
+                iban="BE51561419613262",
+                bic="GKCCBEBB",
+            )
+        )
+        self.assertIsNotNone(refund.id)
+        self.assertIsNotNone(refund.amount)
+        self.assertIsNotNone(refund.msg)
+        print(refund)
+
+    def test_remove(self):
+        tx = self._twikey.paylink.create(
+            PaymentLinkRequest(
+                email="no-reply@twikey.com",
+                title="Test Message",
+                ref="Merchant Reference",
+                amount=10.00,
+                iban="BE51561419613262"
+            )
+        )
+        self.assertIsNotNone(tx.id)
+
+        self._twikey.paylink.remove(
+            RemoveRequest(
+                id=tx.id
+            )
+        )
 
     def test_feed(self):
         self._twikey.paylink.feed(MyFeed())
@@ -33,11 +81,8 @@ class TestPaylinks(unittest.TestCase):
 
 class MyFeed(twikey.PaylinkFeed):
     def paylink(self, paylink):
-        print(
-            "Paylink update #{0} {1} Euro with new state={2}".format(
-                paylink["id"], paylink["amount"], paylink["state"]
-            )
-        )
+        print(paylink)
+        print("-" * 50)
 
 
 if __name__ == "__main__":
