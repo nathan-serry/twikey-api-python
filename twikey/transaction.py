@@ -62,9 +62,9 @@ class Transaction(object):
         See https://www.twikey.com/api/#query-transactions
         Perform a GET request to retrieve all created transactions starting from a specific transaction ID.
         Args:
-            api_key (str): Twikey API key for authentication.
-            from_id (int): Starting transaction ID (required).
-            mndt_id (str, optional): Optional mandate reference to filter results.
+            dict:
+                from_id (int): Starting transaction ID (required).
+                mndt_id (str, optional): Optional mandate reference to filter results.
         Returns:
             dict: Contains 'Entries' and '_links' as returned by the API.
         """
@@ -107,7 +107,6 @@ class Transaction(object):
         See https://www.twikey.com/api/#update-transaction
         Updates an existing transaction by sending a PUT request.
         Parameters:
-            api_key (str): Twikey API key used for authentication
             data (dict): Must contain 'id'; may include 'amount', 'ref', 'message',
                          'place', or 'reqcolldt'
         Returns:
@@ -124,13 +123,12 @@ class Transaction(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Update transaction", e)
 
-    def refund(self, request: RefundRequest):
+    def refund(self, request: RefundRequest) -> RefundResponse:
         """
         See https://www.twikey.com/api/#refund-a-transaction
         Creates a refund for a given transaction. If the beneficiary account does not exist yet,
         it will be registered to the customer using the mandate IBAN or the one provided.
         Parameters:
-            api_key (str): Twikey API key used for authentication
             data (dict): Must include 'id', 'message', and 'amount'. May include
                          'ref', 'place', 'iban', or 'bic'
         Returns:
@@ -158,7 +156,6 @@ class Transaction(object):
         Removes a transaction that has not yet been sent to the bank.
         At least one of 'id' or 'ref' must be provided.
         Parameters:
-            api_key (str): Twikey API key used for authentication
             data (dict): Dictionary with 'id' and/or 'ref' to identify the transaction
         Returns:
             None: A successful deletion returns HTTP 204 with no content
@@ -192,8 +189,11 @@ class Transaction(object):
                 raise self.client.raise_error("Feed transaction", response)
             feed_response = response.json()
             while len(feed_response["Entries"]) > 0:
+                error = False
                 for msg in feed_response["Entries"]:
-                    transaction_feed.transaction(TransactionStatusEntry(msg))
+                    error = transaction_feed.transaction(TransactionStatusEntry(msg))
+                if error:
+                    break
                 response = requests.get(
                     url=url,
                     headers=self.client.headers(),
@@ -253,31 +253,13 @@ class Transaction(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Import batch", e)
 
-    def reporting_import(self, reporting_content):
-        """
-        :param reporting_content content of the coda/camt/mt940 file
-        """
-        url = self.client.instance_url("/reporting")
-        try:
-            self.client.refresh_token_if_required()
-            response = requests.post(
-                url=url,
-                data=reporting_content,
-                headers=self.client.headers(),
-                timeout=60,  # might be large batches
-            )
-            if "ApiErrorCode" in response.headers:
-                raise self.client.raise_error("Import reporting", response)
-        except requests.exceptions.RequestException as e:
-            raise self.client.raise_error_from_request("Import reporting", e)
-
 
 class TransactionFeed:
-    def transaction(self, transaction: TransactionStatusEntry):
+    def transaction(self, transaction: TransactionStatusEntry) -> bool:
         """
         Handle a transaction from the feed.
 
         :param: transaction: The updated transaction (as a TransactionStatusEntry)
-        :return: Return True if an error occurred, else return False
+        :return: Return True if an error occurred, else return True
         """
         pass
