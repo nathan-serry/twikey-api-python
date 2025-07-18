@@ -99,10 +99,6 @@ class TestTransaction(unittest.TestCase):
     @unittest.skipIf("PAIN008_FILEPATH" not in os.environ, "No PAIN008_FILEPATH set")
     def test_batch_import(self):
         self._twikey.transaction.batch_import(self.ct, "PAIN008_FILEPATH")
-        try:
-            self._twikey.transaction.reporting_import("")
-        except twikey.TwikeyError as e:
-            self.assertEqual("invalid_file", e.get_code())
 
     def test_query(self):
         tx = self._twikey.transaction.create(

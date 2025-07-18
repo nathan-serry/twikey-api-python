@@ -62,7 +62,6 @@ class Paylink(object):
         Creates a refund for a given transaction. If the beneficiary account does not exist yet,
         it will be registered to the customer using the mandate IBAN or the one provided.
         Parameters:
-            api_key (str): Twikey API key used for authentication
             data (dict): Must include 'id', 'message', and 'amount'. May include
                          'ref', 'place', 'iban', or 'bic'
         Returns:
@@ -119,10 +118,11 @@ class Paylink(object):
                 raise self.client.raise_error("Feed paylink", response)
             feed_response = response.json()
             while len(feed_response["Links"]) > 0:
+                error = False
                 for msg in feed_response["Links"]:
-                    feed_break = paylink_feed.paylink(PaylinkEntry(msg))
-                    if feed_break == False:
-                        raise self.client.raise_error("MyFeed threw error")
+                    error = paylink_feed.paylink(PaylinkEntry(msg))
+                if error:
+                    break
                 response = requests.get(
                     url=url,
                     headers=self.client.headers(),
@@ -141,6 +141,6 @@ class PaylinkFeed:
         Custom logic for handeling the paylinks gained from the api call
 
         :param paylink: information about a singular paylink
-        :return: in case of your business logic decides stop processing updates return False
+        :return: in case of your business logic decides stop processing updates return True
         """
         pass
