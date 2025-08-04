@@ -117,7 +117,7 @@ class Refund(object):
         Removes a credit transfer that has not yet been sent to the bank.
         At least one of 'id' or 'ref' must be provided.
         Parameters:
-            data (dict): Dictionary with 'id' and/or 'ref' to identify the credit transfer
+            request (TransactionStatusRequest): the id of the credit_transfer
         Returns:
             None: A successful deletion returns HTTP 204 with no content
         """
