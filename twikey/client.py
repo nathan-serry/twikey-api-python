@@ -5,10 +5,10 @@ import logging
 import requests
 
 from .document import DocumentService
-from .invoice import Invoice
-from .paylink import Paylink
-from .transaction import Transaction
-from .refund import Refund
+from .invoice import InvoiceService
+from .transaction import TransactionService
+from .paylink import PaylinkService
+from .refund import RefundService
 
 
 class TwikeyClient(object):
@@ -39,10 +39,10 @@ class TwikeyClient(object):
         self.api_base = base_url
         self.merchant_id = 0
         self.document = DocumentService(self)
-        self.transaction = Transaction(self)
-        self.paylink = Paylink(self)
-        self.invoice = Invoice(self)
-        self.refund = Refund(self)
+        self.invoice = InvoiceService(self)
+        self.transaction = TransactionService(self)
+        self.paylink = PaylinkService(self)
+        self.refund = RefundService(self)
         self.logger = logging.getLogger(__name__)
 
     def instance_url(self, url=""):

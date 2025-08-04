@@ -1,6 +1,8 @@
+from datetime import datetime
+
 class Document:
     __slots__ = [
-        "mandate_id", "state", "local_instream", "sequential_type", "sign_date",
+        "mandate_id", "state", "local_instream", "sequence_type", "sign_date",
         "debtor_name", "debtor_street", "debtor_city", "debtor_zip", "debtor_country", "btw_nummer",
         "country_of_residence", "debtor_email", "customer_number", "debtor_iban", "Debtor_bic", "debtor_bank",
         "referenced_document", "supplementary_data"
@@ -15,7 +17,7 @@ class Document:
         self.local_instream = mndt.get("LclInstrm")
 
         ocrncs = mndt.get("Ocrncs", {})
-        self.sequential_type = ocrncs.get("SeqTp")
+        self.sequence_type = ocrncs.get("SeqTp")
         self.sign_date = ocrncs.get("Drtn", {}).get("FrDt")
 
         dbtr = mndt.get("Dbtr", {})
@@ -61,6 +63,45 @@ class Document:
     def __repr__(self):
         return self.__str__()
 
+class DocumentFeed:
+    def start(self, position: str, number_of_updates: int):
+        """
+        Allow storing the start of the feed
+        Useful for storing or logging the current feed position and the number of items
+        :param position: position where the feed started returned by the 'X-LAST' header
+        :param number_of_updates: number of items in the feed
+        """
+        pass
+
+    def new_document(self, doc: Document, evt_time: datetime) -> bool:
+        """
+        Handle a newly available document
+        :param doc: actual document
+        :param evt_time: time of creation
+        :return
+        """
+        pass
+
+    def updated_document(self, original_doc_number: str, doc: Document, reason: str, author:str, evt_time: datetime) -> bool:
+        """
+        Handle an update of a document
+        :param original_doc_number: original reference to the document
+        :param doc: actual document
+        :param reason: reason of change
+        :param author: email of the author
+        :param evt_time: time of creation
+        """
+        pass
+
+    def cancelled_document(self, doc_number: str, reason: str, author:str, evt_time: datetime) -> bool:
+        """
+        Handle an cancelled document
+        :param doc_number: reference to the document
+        :param reason: reason of change
+        :param author: email of the author
+        :param evt_time: time of creation
+        """
+        pass
 
 class InviteResponse:
     __slots__ = ["url", "key", "mndtId"]
@@ -74,16 +115,16 @@ class InviteResponse:
 
 
 class SignResponse:
-    __slots__ = ["MndtId"]
+    __slots__ = ["MndtId","url"]
 
     def __init__(self, **kwargs):
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
 
     def __str__(self):
-        return (
-            f"MndtId {self.MndtId}\n"
-        )
+        if self.url:
+            return f"SignResponse url={self.url} mndtId={self.MndtId}\n"
+        return f"SignResponse mndtId={self.MndtId}\n"
 
 
 class QueryMandateResponse:

@@ -16,6 +16,9 @@ class NewTransactionRequest:
     __slots__ = ["mndt_id", "date", "reqcolldt", "message", "ref", "amount", "place", "refase2e"]
 
     def __init__(self, **kwargs):
+        unknown_keys = set(kwargs) - set(self.__slots__)
+        if unknown_keys:
+            raise TypeError(f"Unknown parameter(s): {', '.join(unknown_keys)}")
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
 

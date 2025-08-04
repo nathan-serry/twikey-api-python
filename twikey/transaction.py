@@ -1,14 +1,16 @@
 import requests
-from twikey.model.transaction_request import *
-from twikey.model.transaction_response import *
+
+from .model.transaction_request import NewTransactionRequest, StatusRequest, QueryTransactionsRequest, ActionRequest, \
+    UpdateRequest, RefundRequest, RemoveTransactionRequest
+from .model.transaction_response import Transaction, TransactionStatusResponse, RefundResponse
 
 
-class Transaction(object):
+class TransactionService(object):
     def __init__(self, client) -> None:
         super().__init__()
         self.client = client
 
-    def create(self, request: NewTransactionRequest) -> TransactionStatusEntry:
+    def create(self, request: NewTransactionRequest) -> Transaction:
         """
         See https://www.twikey.com/api/#new-transaction
         :param data: parameters of the rest call as a struct
@@ -30,7 +32,7 @@ class Transaction(object):
             entries_ = response.json()["Entries"]
             if len(entries_) > 0:
                 first_transaction = entries_[0]
-                return TransactionStatusEntry(first_transaction)
+                return Transaction(first_transaction)
             return response.json()
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Create transaction", e)
@@ -62,9 +64,8 @@ class Transaction(object):
         See https://www.twikey.com/api/#query-transactions
         Perform a GET request to retrieve all created transactions starting from a specific transaction ID.
         Args:
-            dict:
-                from_id (int): Starting transaction ID (required).
-                mndt_id (str, optional): Optional mandate reference to filter results.
+            from_id (int): Starting transaction ID (required).
+            mndt_id (str, optional): Optional mandate reference to filter results.
         Returns:
             dict: Contains 'Entries' and '_links' as returned by the API.
         """
@@ -123,7 +124,7 @@ class Transaction(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Update transaction", e)
 
-    def refund(self, request: RefundRequest) -> RefundResponse:
+    def refund(self, request: RefundRequest):
         """
         See https://www.twikey.com/api/#refund-a-transaction
         Creates a refund for a given transaction. If the beneficiary account does not exist yet,
@@ -189,11 +190,8 @@ class Transaction(object):
                 raise self.client.raise_error("Feed transaction", response)
             feed_response = response.json()
             while len(feed_response["Entries"]) > 0:
-                error = False
                 for msg in feed_response["Entries"]:
-                    error = transaction_feed.transaction(TransactionStatusEntry(msg))
-                if error:
-                    break
+                    transaction_feed.transaction(Transaction(msg))
                 response = requests.get(
                     url=url,
                     headers=self.client.headers(),
@@ -216,8 +214,6 @@ class Transaction(object):
         data = {"ct": ct}
         if colltndt:
             data["colltndt"] = colltndt
-        # TODO: throw this out
-        data["auto"] = True
         try:
             self.client.refresh_token_if_required()
             response = requests.post(
@@ -235,7 +231,7 @@ class Transaction(object):
     def batch_import(self, ct, pain008_xml):
         """
         See https://www.twikey.com/api/#import-collection
-        :param pain008_xml content of the pain008 file
+        :param pain008_xml the pain008 file
         """
         url = self.client.instance_url(f"/collect/import?ct={ct}")
         try:
@@ -247,19 +243,26 @@ class Transaction(object):
                     headers=self.client.headers("text/xml"),
                     timeout=60,  # might be large batches
                 )
-            if "ApiErrorCode" in response.headers:
-                raise self.client.raise_error("Import batch", response)
-            return response.json()
+                if "ApiErrorCode" in response.headers:
+                    raise self.client.raise_error("Import batch", response)
+                return response.json()
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Import batch", e)
 
-
-class TransactionFeed:
-    def transaction(self, transaction: TransactionStatusEntry) -> bool:
+    def reporting_import(self, reporting_content):
         """
-        Handle a transaction from the feed.
-
-        :param: transaction: The updated transaction (as a TransactionStatusEntry)
-        :return: Return True if an error occurred, else return True
+        :param reporting_content content of the coda/camt/mt940 file
         """
-        pass
+        url = self.client.instance_url("/reporting")
+        try:
+            self.client.refresh_token_if_required()
+            response = requests.post(
+                url=url,
+                data=reporting_content,
+                headers=self.client.headers(),
+                timeout=60,  # might be large batches
+            )
+            if "ApiErrorCode" in response.headers:
+                raise self.client.raise_error("Import reporting", response)
+        except requests.exceptions.RequestException as e:
+            raise self.client.raise_error_from_request("Import reporting", e)

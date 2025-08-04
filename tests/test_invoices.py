@@ -4,8 +4,10 @@ import unittest
 import time
 import uuid
 from datetime import date, timedelta
-from twikey.model.invoice_request import *
-from twikey.model.invoice_response import InvoiceResponse
+
+from twikey.model.invoice_request import Customer, InvoiceRequest, LineItem, UpdateInvoiceRequest, DetailsRequest, \
+    ActionRequest, ActionType, UblUploadRequest, BulkInvoiceRequest
+from twikey.model.invoice_response import Invoice
 
 
 class TestInvoices(unittest.TestCase):
@@ -23,25 +25,25 @@ class TestInvoices(unittest.TestCase):
     def test_new_invite(self):
         invoice = self._twikey.invoice.create(
             InvoiceRequest(
-                id=str(uuid.uuid4()),
-                number="Inv-" + str(round(time.time())),
-                title="Invoice " + date.today().strftime("%B"),
-                remittance="596843697521",
-                ct=1988,
-                amount=100,
-                date=(date.today() + timedelta(days=7)).isoformat(),
-                duedate=(date.today() + timedelta(days=14)).isoformat(),
-                customer=Customer(
-                    customerNumber="customer2",
-                    email="no-reply@twikey.com",
-                    firstname="Twikey",
-                    lastname="Support",
-                    address="Derbystraat 43",
-                    city="Gent",
-                    zip="9051",
-                    country="BE",
-                    l="en",
-                    mobile="32498665995",
+                id = uuid.uuid4(),
+                number = "Inv-" + str(round(time.time())),
+                title = "Invoice " + date.today().strftime("%B"),
+                remittance = "596843697521",
+                ct = 1988,
+                amount = 100,
+                date = date.today(),
+                duedate = (date.today() + timedelta(days=7)),
+                customer = Customer(
+                    customer_number = "customer123",
+                    email = "no-reply@twikey.com",
+                    first_name = "Twikey",
+                    last_name = "Support",
+                    address = "Derbystraat 43",
+                    city = "Gent",
+                    zip = "9000",
+                    country = "BE",
+                    lang = "nl",
+                    mobile = "32498665995",
                 ),
                 # "pdf": "JVBERi0xLj....RU9GCg=="
                 lines=[
@@ -69,6 +71,8 @@ class TestInvoices(unittest.TestCase):
             )
         )
         self.assertIsNotNone(invoice)
+        print("New invoice to be paid @ " + invoice.url)
+
 
     def test_update(self):
         invoice = self._twikey.invoice.update(
@@ -94,15 +98,15 @@ class TestInvoices(unittest.TestCase):
                 date=(date.today() + timedelta(days=7)).isoformat(),
                 duedate=(date.today() + timedelta(days=14)).isoformat(),
                 customer=Customer(
-                    customerNumber="customer2",
+                    customer_number="customer2",
                     email="no-reply@twikey.com",
-                    firstname="Twikey",
-                    lastname="Support",
+                    first_name="Twikey",
+                    last_name="Support",
                     address="Derbystraat 43",
                     city="Gent",
                     zip="9051",
                     country="BE",
-                    l="en",
+                    lang="en",
                     mobile="32498665995",
                 ),
                 # "pdf": "JVBERi0xLj....RU9GCg=="
@@ -110,11 +114,8 @@ class TestInvoices(unittest.TestCase):
         )
         self.assertIsNotNone(invoice)
 
-        self._twikey.invoice.delete(
-            DeleteRequest(
-                id=invoice.id,
-            )
-        )
+        self._twikey.invoice.delete(inoviceId=invoice.id)
+
 
     def test_details(self):
         invoice = self._twikey.invoice.details(
@@ -156,15 +157,15 @@ class TestInvoices(unittest.TestCase):
                         date=(date.today() + timedelta(days=7)).isoformat(),
                         duedate=(date.today() + timedelta(days=14)).isoformat(),
                         customer=Customer(
-                            customerNumber="customer2",
+                            customer_number="customer2",
                             email="no-reply@twikey.com",
-                            firstname="Twikey",
-                            lastname="Support",
+                            first_name="Twikey",
+                            last_name="Support",
                             address="Derbystraat 43",
                             city="Gent",
                             zip="9051",
                             country="BE",
-                            l="en",
+                            lang="en",
                             mobile="32498665995",
                         ),
                     )
@@ -187,15 +188,15 @@ class TestInvoices(unittest.TestCase):
                         date=(date.today() + timedelta(days=7)).isoformat(),
                         duedate=(date.today() + timedelta(days=14)).isoformat(),
                         customer=Customer(
-                            customerNumber="customer2",
+                            customer_number="customer2",
                             email="no-reply@twikey.com",
-                            firstname="Twikey",
-                            lastname="Support",
+                            first_name="Twikey",
+                            last_name="Support",
                             address="Derbystraat 43",
                             city="Gent",
                             zip="9051",
                             country="BE",
-                            l="en",
+                            lang="en",
                             mobile="32498665995",
                         ),
                     )
@@ -205,11 +206,7 @@ class TestInvoices(unittest.TestCase):
         )
         self.assertIsNotNone(batch_invoices)
 
-        batch_info = self._twikey.invoice.bulk_details(
-            BulkBatchDetailsRequest(
-                batch_id=batch_invoices.batch_id,
-            )
-        )
+        batch_info = self._twikey.invoice.bulk_details(batch_id=batch_invoices.batch_id)
         self.assertIsNotNone(batch_info)
 
     def test_feed(self):
@@ -217,21 +214,19 @@ class TestInvoices(unittest.TestCase):
 
 
 class MyFeed(twikey.InvoiceFeed):
-    def invoice(self, invoice):
+    def invoice(self, invoice:Invoice):
         new_state = ""
-        if invoice["state"] == "PAID":
-            lastpayment_ = invoice["lastpayment"]
+        if invoice.state == "PAID":
+            lastpayment_ = invoice.payment_events
             if lastpayment_:
-                new_state = "PAID via " + lastpayment_["method"]
+                new_state = "PAID via " + lastpayment_[0].method
         else:
-            new_state = "now has state " + invoice["state"]
+            new_state = "now has state " + invoice.state
         print(
             "Invoice update with number {0} {1} euro {2}".format(
-                invoice["number"], invoice["amount"], new_state
+                invoice.number, invoice.amount, new_state
             )
         )
-        print(InvoiceResponse(**invoice))
-        print("-" * 50)
 
 
 if __name__ == "__main__":

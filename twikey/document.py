@@ -1,9 +1,13 @@
 import logging
 
 import requests
+from datetime import datetime
 
-from twikey.model.document_request import *
-from twikey.model.document_response import *
+from .model.document_request import InviteRequest, SignRequest, FetchMandateRequest, QueryMandateRequest, \
+    MandateActionRequest, UpdateMandateRequest, PdfUploadRequest
+
+from .model.document_response import InviteResponse, SignResponse, Document, QueryMandateResponse, PdfResponse, \
+    CustomerAccessResponse, DocumentFeed
 
 class DocumentService(object):
     def __init__(self, client) -> None:
@@ -30,8 +34,9 @@ class DocumentService(object):
     def sign(self, request: SignRequest) -> SignResponse:  # pylint: disable=W8106
         url = self.client.instance_url("/sign")
         data = request.to_request()
-        if request.method:
-            data["method"] = request.method.value
+        if not request.method:
+            raise self.client.raise_error("Missing method")
+
         try:
             self.client.refresh_token_if_required()
             response = requests.post(
@@ -110,10 +115,8 @@ class DocumentService(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Update", e)
 
-    def cancel(self, mandate_number, reason):
-        url = self.client.instance_url(
-            "/mandate?mndtId=" + mandate_number + "&rsn=" + reason
-        )
+    def cancel(self, mandate_number: str, reason: str):
+        url = self.client.instance_url(f"/mandate?mndtId={mandate_number}&rsn={reason}")
         try:
             self.client.refresh_token_if_required()
             response = requests.delete(
@@ -127,7 +130,7 @@ class DocumentService(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Cancel", e)
 
-    def feed(self, document_feed, start_position=False):
+    def feed(self, document_feed: DocumentFeed, start_position=False):
         url = self.client.instance_url(
             "/mandate?include=id&include=mandate&include=person"
         )
@@ -162,22 +165,30 @@ class DocumentService(object):
                         mndt_id_ = msg["OrgnlMndtId"]
                         self.logger.debug("Feed update : %s" % mndt_id_)
                         mndt_ = msg["Mndt"]
-                        rsn_ = msg["AmdmntRsn"]
+                        amdmnt_rsn_ = msg["AmdmntRsn"]
+                        rsn_ = amdmnt_rsn_.get("Rsn")
+                        author_ = amdmnt_rsn_["Orgtr"]["CtctDtls"]["EmailAdr"]
                         at_ = msg["EvtTime"]
-                        error = document_feed.updated_document(
-                            mndt_id_, mndt_, rsn_, at_
-                        )
+                        if at_.endswith("Z"):
+                            at_ = at_.replace("Z", "+00:00")
+                        error = document_feed.updated_document(mndt_id_, Document(mandate=mndt_), rsn_, author_, datetime.fromisoformat(at_))
                     elif "CxlRsn" in msg:
                         mndt_ = msg["OrgnlMndtId"]
-                        rsn_ = msg["CxlRsn"]
+                        cxl_rsn_ = msg["CxlRsn"]
+                        rsn_ = cxl_rsn_.get("Rsn")
+                        author_ = cxl_rsn_["Orgtr"]["CtctDtls"]["EmailAdr"]
                         at_ = msg["EvtTime"]
+                        if at_.endswith("Z"):
+                            at_ = at_.replace("Z", "+00:00")
                         self.logger.debug("Feed cancel : %s" % mndt_)
-                        error = document_feed.cancelled_document(mndt_, rsn_, at_)
+                        error = document_feed.cancelled_document(mndt_, rsn_, author_, datetime.fromisoformat(at_))
                     else:
                         mndt_ = msg["Mndt"]
                         at_ = msg["EvtTime"]
+                        if at_.endswith("Z"):
+                            at_ = at_.replace("Z", "+00:00")
                         self.logger.debug("Feed create : %s" % mndt_)
-                        error = document_feed.new_document(mndt_, at_)
+                        error = document_feed.new_document(Document(mandate=mndt_), datetime.fromisoformat(at_))
                     if error:
                         break
                 if error:
@@ -196,12 +207,11 @@ class DocumentService(object):
             raise self.client.raise_error_from_request("Mandate feed", e)
 
     def upload_pdf(self, request: PdfUploadRequest):
-        data = request.to_request()
         url = self.client.instance_url(
-            f"/mandate/pdf?mndtId={data.get('mndtId')}&bankSignature={data.get('bankSignature')}")
+            f"/mandate/pdf?mndtId={request.mndt_id}&bankSignature={request.bank_signature}")
         try:
             self.client.refresh_token_if_required()
-            with open(data.get('pdfPath'), "rb") as file:
+            with open(request.pdf_path, "rb") as file:
                 response = requests.post(
                     url=url, data=file, headers=self.client.headers('application/pdf'), timeout=15
                 )
@@ -210,9 +220,8 @@ class DocumentService(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("detail", e)
 
-    def retrieve_pdf(self, request: PdfRetrieveRequest) -> PdfResponse:
-        data = request.to_request()
-        url = self.client.instance_url(f"/mandate/pdf?mndtId={data.get('mndtId')}")
+    def retrieve_pdf(self, mndt_id: str) -> PdfResponse:
+        url = self.client.instance_url(f"/mandate/pdf?mndtId={mndt_id}")
         try:
             self.client.refresh_token_if_required()
             response = requests.get(
@@ -242,57 +251,15 @@ class DocumentService(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Update customer", e)
 
-    def customer_access(self, request: CustomerAccessRequest) -> CustomerAccessResponse:
-        data = request.to_request()
+    def customer_access(self, mndt_id: str) -> CustomerAccessResponse:
         url = self.client.instance_url("/customeraccess")
         try:
             self.client.refresh_token_if_required()
             response = requests.post(
-                url=url, data=data, headers=self.client.headers(), timeout=15
+                url=url, data={"mndtId": mndt_id}, headers=self.client.headers(), timeout=15
             )
             if "ApiErrorCode" in response.headers:
                 raise self.client.raise_error("Cancel", response)
             return CustomerAccessResponse(**response.json())
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("customer access", e)
-
-
-class DocumentFeed:
-    def start(self, position, number_of_updates):
-        """
-        Allow storing the start of the feed
-        Useful for storing or logging the current feed position and the number of items
-        :param position: position where the feed started returned by the 'X-LAST' header
-        :param number_of_updates: number of items in the feed
-        """
-        pass
-
-    def new_document(self, doc, evt_time) -> bool:
-        """
-        Handle a newly available document
-        :param doc: actual document as a dictionary
-        :param evt_time: time of creation (ISO 8601 format)
-        :return: Return True if an error occurred else return False
-        """
-        pass
-
-    def updated_document(self, original_doc_number, doc, reason, evt_time) -> bool:
-        """
-        Handle an update of a document
-        :param original_doc_number: original reference to the document
-        :param doc: actual document as a dictionary
-        :param reason: reason of change as a dictionary
-        :param evt_time: time of creation (ISO 8601 format)
-        :return: Return True if an error occurred else return False
-        """
-        pass
-
-    def cancelled_document(self, doc_number, reason, evt_time) -> bool:
-        """
-        Handle a cancelled document
-        :param doc_number: reference to the document
-        :param reason: reason of cancellation  as a dictionary
-        :param evt_time: time of creation (ISO 8601 format)
-        :return: Return True if an error occurred else return False
-        """
-        pass

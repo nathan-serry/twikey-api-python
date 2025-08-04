@@ -2,19 +2,20 @@ import os
 import twikey
 import unittest
 
-from twikey.model.document_request import *
-from twikey.model.document_response import *
+from twikey.model.document_request import SignMethod, UpdateMandateRequest, PdfUploadRequest
+from twikey.model.document_request import InviteRequest, SignRequest, FetchMandateRequest, QueryMandateRequest, \
+    MandateActionRequest
 
 
 class TestDocument(unittest.TestCase):
+    _twikey = None
 
     @unittest.skipIf("TWIKEY_API_KEY" not in os.environ, "No TWIKEY_API_KEY set")
     def setUp(self):
-        if "TWIKEY_API_KEY" not in os.environ:
-            self.skipTest("No TWIKEY_API_KEY set")
-
         key = os.environ["TWIKEY_API_KEY"]
-        base_url = os.environ["TWIKEY_API_URL"]
+        base_url = "https://test.beta.twikey.com/api/creditor"
+        if "TWIKEY_API_URL" in os.environ:
+            base_url = os.environ["TWIKEY_API_URL"]
         self._twikey = twikey.TwikeyClient(key, base_url)
 
     def test_new_invite(self):
@@ -26,16 +27,16 @@ class TestDocument(unittest.TestCase):
             InviteRequest(
                 ct=ct,
                 email="no-reply@twikey.com",
-                firstname="Info",
-                lastname="Twikey",
+                first_name="Info",
+                last_name="Twikey",
                 l="en",
                 address="Abby road",
                 city="Liverpool",
                 zip="1526",
                 country="BE",
                 mobile="",
-                iban="BE51561419613262",
-                bic="GKCCBEBB",
+                iban="",
+                bic="",
             )
         )
         self.assertIsNotNone(invite)
@@ -45,7 +46,7 @@ class TestDocument(unittest.TestCase):
             SignRequest(
                 ct="772",
                 l="en",
-                iban="BE51561419613262",
+                iban="NL46ABNA8910219718",
                 bic="GKCCBEBB",
                 customer_number="CUST001",
                 email="joe.doe@gmail.com",
@@ -81,6 +82,7 @@ class TestDocument(unittest.TestCase):
                 place="Brussels",
             )
         )
+        print("Imported mandate:", signed_mandate)
         self.assertIsNotNone(signed_mandate)
         self.assertIsNotNone(signed_mandate.MndtId)
 
@@ -152,7 +154,7 @@ class TestDocument(unittest.TestCase):
         )
 
     def test_action(self):
-        mandate_action = self._twikey.document.action(
+        self._twikey.document.action(
             MandateActionRequest(
                 mndt_id="CORERECURRENTNL17071",
                 type="reminder",
@@ -161,7 +163,7 @@ class TestDocument(unittest.TestCase):
         )
 
     def test_update(self):
-        update = self._twikey.document.update(
+        self._twikey.document.update(
             UpdateMandateRequest(
                 mndt_id="MN543210",
                 ct="772",
@@ -225,7 +227,6 @@ class TestDocument(unittest.TestCase):
             )
         )
         self.assertIsNotNone(signed_mandate)
-
         self._twikey.document.upload_pdf(
             PdfUploadRequest(
                 mndt_id=signed_mandate.MndtId,
@@ -235,11 +236,7 @@ class TestDocument(unittest.TestCase):
         )
 
     def test_retrieve_pdf(self):
-        retrieved_pdf = self._twikey.document.retrieve_pdf(
-            PdfRetrieveRequest(
-                mndt_id="CORERECURRENTNL17192"
-            )
-        )
+        retrieved_pdf = self._twikey.document.retrieve_pdf("CORERECURRENTNL17192")
         retrieved_pdf.save("/tmp/pdf.pdf")
         self.assertIsNotNone(retrieved_pdf)
 
@@ -286,33 +283,24 @@ class TestDocument(unittest.TestCase):
         )
         self.assertIsNotNone(signed_mandate)
 
-        access_url = self._twikey.document.customer_access(
-            CustomerAccessRequest(
-                mndt_id=signed_mandate.MndtId
-            )
-        )
+        access_url = self._twikey.document.customer_access(mndt_id=signed_mandate.MndtId)
         self.assertIsNotNone(access_url)
 
     def test_feed(self):
-        feed = self._twikey.document.feed(MyDocumentFeed())
+        self._twikey.document.feed(MyDocumentFeed())
 
 
 class MyDocumentFeed(twikey.DocumentFeed):
-    def new_document(self, doc, evt_time):
-        fetched_doc = Document(mandate=doc, headers={"X-STATE": doc.get("State", "UNKNOWN")})
-        print("Document created @", evt_time)
-        print(fetched_doc)
-        print("-" * 50)
+    def new_document(self, doc: twikey.Document, evt_time):
+        print("Document created   ", doc.mandate_id, "@", evt_time)
 
-    def updated_document(self, original_number, doc, reason, evt_time):
-        fetched_doc = Document(mandate=doc, headers={"X-STATE": doc.get("State", "UNKNOWN")})
-        print(f"Document updated ({original_number}) b/c {reason['Rsn']} @ {evt_time}")
-        print(fetched_doc)
-        print("-" * 50)
+    def updated_document(self, original_doc_number: str, doc: twikey.Document, reason: str, author: str, evt_time):
+        print(
+            "Document updated   ", original_doc_number, "b/c", reason, "@", evt_time
+        )
 
-    def cancelled_document(self, number, reason, evt_time):
-        print(f"Document cancelled {number} b/c {reason['Rsn']} @ {evt_time}")
-        print("-" * 50)
+    def cancelled_document(self, doc_number: str, reason: str, author: str, evt_time):
+        print("Document cancelled ", doc_number, "b/c", reason, "@", evt_time)
 
 
 if __name__ == "__main__":

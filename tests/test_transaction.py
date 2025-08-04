@@ -2,7 +2,10 @@ import os
 import time
 import twikey
 import unittest
-from twikey.model.transaction_request import *
+
+from twikey.model.transaction_request import NewTransactionRequest, StatusRequest, ActionRequest, UpdateRequest, \
+    RefundRequest, QueryTransactionsRequest, RemoveTransactionRequest
+from twikey.model.transaction_response import Transaction
 
 
 class TestTransaction(unittest.TestCase):
@@ -20,14 +23,15 @@ class TestTransaction(unittest.TestCase):
             base_url = os.environ["TWIKEY_API_URL"]
         self._twikey = twikey.TwikeyClient(key, base_url)
 
+    @unittest.skipIf("MNDTNUMBER" not in os.environ, "No MNDTNUMBER set")
     def test_new_invite(self):
         tx = self._twikey.transaction.create(
             NewTransactionRequest(
-                mndt_id="CORERECURRENTNL16318",
-                message="Test Message",
-                ref="Merchant Reference",
-                amount=10.00,
-                place="Here",
+                mndt_id = os.environ["MNDTNUMBER"],
+                message = "Test Message",
+                ref = "Merchant Reference",
+                amount = 10.00,
+                place = "Here",
             )
         )
         self.assertIsNotNone(tx)
@@ -72,24 +76,11 @@ class TestTransaction(unittest.TestCase):
             )
         )
 
+    @unittest.skipIf("PAID_TX_ID" not in os.environ, "No PAID_TX_ID set")
     def test_refund(self):
-        tx = self._twikey.transaction.create(
-            NewTransactionRequest(
-                mndt_id="CORERECURRENTNL16318",
-                message="Test Message",
-                ref="Merchant Reference",
-                amount=50.00,
-                place="Here",
-            )
-        )
-        self._twikey.transaction.batch_send(self.ct)
-        time.sleep(1)
-        self._twikey.transaction.batch_send(self.ct)
-        time.sleep(1)
-
         refund = self._twikey.transaction.refund(
             RefundRequest(
-                id=tx.id,
+                id=os.environ["PAID_TX_ID"],
                 message="Test message",
                 amount=50.00,
             )
@@ -99,6 +90,7 @@ class TestTransaction(unittest.TestCase):
     @unittest.skipIf("PAIN008_FILEPATH" not in os.environ, "No PAIN008_FILEPATH set")
     def test_batch_import(self):
         self._twikey.transaction.batch_import(self.ct, "PAIN008_FILEPATH")
+
 
     def test_query(self):
         tx = self._twikey.transaction.create(
@@ -139,31 +131,41 @@ class TestTransaction(unittest.TestCase):
             )
         )
 
+    @unittest.skipIf("CAMT053" not in os.environ, "No CAMT053 (file) set")
+    def test_import_camt053(self):
+        try:
+            self._twikey.transaction.reporting_import(os.environ["CAMT053"])
+        except twikey.TwikeyError as e:
+            self.assertEqual("invalid_file", e.get_code())
+
     def test_feed(self):
         self._twikey.transaction.feed(MyFeed())
 
 
 class MyFeed(twikey.TransactionFeed):
-    def transaction(self, transaction):
-        print(transaction)
-        print("-" * 50)
+    def transaction(self, transaction: Transaction):
+        state = transaction.state
+        final = transaction.final
+        ref = transaction.ref
+        if not ref:
+            ref = transaction.msg
+        _state = state
         _final = ""
-        if transaction.is_paid():
+        if state == "PAID":
             _state = "is now paid"
-        elif transaction.is_error():
+        elif state == "ERROR":
             _state = "failed due to '" + transaction.bkmsg + "'"
-            if transaction.final:
+            if final:
                 # final means Twikey has gone through all dunning steps, but customer still did not pay
                 _final = "with no more dunning steps"
         print(
             "Transaction update",
             transaction.amount,
             "euro with",
-            transaction.ref,
-            transaction.state,
+            ref,
+            _state,
             _final,
         )
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,9 +1,10 @@
 import requests
-from twikey.model.paylink_request import *
-from twikey.model.paylink_response import *
+
+from .model.paylink_request import PaymentLinkRequest, PaymentLinkStatusRequest, PaymentLinkRefundRequest
+from .model.paylink_response import CreatedPaylinkResponse, Paylink, PaylinkFeed
 
 
-class Paylink(object):
+class PaylinkService(object):
     def __init__(self, client) -> None:
         super().__init__()
         self.client = client
@@ -27,16 +28,17 @@ class Paylink(object):
             )
             if "ApiErrorCode" in response.headers:
                 raise self.client.raise_error("Create paylink", response)
-            return CreatedPaylinkResponse(response.json())
+            json_response = response.json()
+            return CreatedPaylinkResponse(json_response)
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Create paylink", e)
 
-    def status_details(self, request: StatusRequest) -> PaylinkEntry:
+    def status_details(self, request: PaymentLinkStatusRequest) -> Paylink:
         """
         See https://www.twikey.com/api/#status-paymentlink
         Retrieve transaction status by ID, ref, or mandate ID.
         Args:
-            request (TransactionStatusRequest): The query parameters. (See StatusPaymentLinkRequest)
+            request (PaymentLink): The query parameters. (See PaymentLink)
         Returns:
             TransactionStatusResponse: List of transaction status entries.
         Raises:
@@ -52,11 +54,12 @@ class Paylink(object):
                 raise self.client.raise_error("Transaction detail", response)
             _links = response.json()["Links"]
             if len(_links) > 0:
-                return PaylinkEntry(_links[0])
+                return Paylink(_links[0])
+            return None
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Transaction detail", e)
 
-    def refund(self, request: RefundRequest) -> PaylinkEntry:
+    def refund(self, request: PaymentLinkRefundRequest) -> Paylink:
         """
         See https://www.twikey.com/api/#refund-paymentlink
         Creates a refund for a given transaction. If the beneficiary account does not exist yet,
@@ -75,11 +78,11 @@ class Paylink(object):
             response.raise_for_status()
             if "ApiErrorCode" in response.headers:
                 raise self.client.raise_error("Update transaction", response)
-            return PaylinkEntry(response.json())
+            return Paylink(response.json())
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Update transaction", e)
 
-    def remove(self, request: RemoveRequest):
+    def remove(self, link_id: int):
         """
         See https://www.twikey.com/api/#remove-paymentlink
         Removes a payment link that has not yet been sent to the bank.
@@ -88,8 +91,7 @@ class Paylink(object):
         Returns:
             None: A successful deletion returns HTTP 204 with no content
         """
-        data = request.to_request()
-        url = self.client.instance_url(f"/payment/link?id={data.get('id')}")
+        url = self.client.instance_url(f"/payment/link?id={link_id}")
         try:
             self.client.refresh_token_if_required()
             response = requests.delete(url=url, headers=self.client.headers(), timeout=15)
@@ -99,7 +101,7 @@ class Paylink(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Update transaction", e)
 
-    def feed(self, paylink_feed):
+    def feed(self, paylink_feed:PaylinkFeed):
         """
         See https://www.twikey.com/api/#paymentlink-feed
         does the api call to the server
@@ -120,7 +122,7 @@ class Paylink(object):
             while len(feed_response["Links"]) > 0:
                 error = False
                 for msg in feed_response["Links"]:
-                    error = paylink_feed.paylink(PaylinkEntry(msg))
+                    error = paylink_feed.paylink(Paylink(msg))
                 if error:
                     break
                 response = requests.get(
@@ -134,13 +136,3 @@ class Paylink(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Feed paylink", e)
 
-
-class PaylinkFeed:
-    def paylink(self, paylink) -> bool:
-        """
-        Custom logic for handeling the paylinks gained from the api call
-
-        :param paylink: information about a singular paylink
-        :return: in case of your business logic decides stop processing updates return True
-        """
-        pass

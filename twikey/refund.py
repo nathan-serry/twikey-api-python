@@ -1,9 +1,10 @@
 import requests
-from twikey.model.refund_request import *
-from twikey.model.refund_response import *
+from twikey.model.refund_request import AddBeneficiaryRequest, CreateCreditTransferRequest, \
+    CreateTransferBatchRequest, DisableBeneficiaryRequest
+from twikey.model.refund_response import Refund, CreditTransferBatch, GetbeneficiarieResponse, RefundFeed
 
 
-class Refund(object):
+class RefundService(object):
     def __init__(self, client) -> None:
         super().__init__()
         self.client = client
@@ -80,12 +81,13 @@ class Refund(object):
                 raise self.client.raise_error("Create refund", response)
             _links = response.json()["Entries"]
             if _links and len(_links) > 0:
-                return RefundStatusEntry(_links[0])
+                link = _links[0]
+                return Refund(link)
             return None
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Create refund", e)
 
-    def details(self, request: CreditTransferDetailRequest):
+    def details(self, refund_id: str):
         """
         See https://www.twikey.com/api/#status-paymentlink
         Retrieve transaction status by ID, ref, or mandate ID.
@@ -96,22 +98,21 @@ class Refund(object):
         Raises:
             TwikeyError: On error responses.
         """
-        params = request.to_request()
         url = self.client.instance_url("/transfer/detail")
         try:
             self.client.refresh_token_if_required()
             headers = self.client.headers("application/json")
-            response = requests.get(url=url, params=params, headers=headers, timeout=15)
+            response = requests.get(url=url, params={"id": refund_id}, headers=headers, timeout=15)
             if response.status_code != 200:
                 raise self.client.raise_error("Transfer detail", response)
             _links = response.json()["Entries"]
             if _links and len(_links) > 0:
-                return RefundStatusEntry(_links[0])
+                return Refund(_links[0])
             return None
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Transaction detail", e)
 
-    def remove(self, request: RemoveCreditTransferRequest):
+    def remove(self, refund_id: str):
         """
         See https://www.twikey.com/api/#remove-a-credit-transfer
         Removes a credit transfer that has not yet been sent to the bank.
@@ -121,8 +122,7 @@ class Refund(object):
         Returns:
             None: A successful deletion returns HTTP 204 with no content
         """
-        data = request.to_request()
-        url = self.client.instance_url(f"/transfer?id={data.get('id')}")
+        url = self.client.instance_url(f"/transfer?id={refund_id}")
         try:
             self.client.refresh_token_if_required()
             response = requests.delete(url=url, headers=self.client.headers(), timeout=15)
@@ -160,7 +160,7 @@ class Refund(object):
                 raise self.client.raise_error("Create batch refunds", response)
             _links = response.json()["CreditTransfers"]
             if _links and len(_links) > 0:
-                return CreditTransferEntry(_links[0])
+                return CreditTransferBatch(_links[0])
             return None
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Create batch refunds", e)
@@ -193,12 +193,12 @@ class Refund(object):
                 raise self.client.raise_error("Create refund", response)
             _links = response.json()["CreditTransfers"]
             if _links and len(_links) > 0:
-                return CreditTransferEntry(_links[0])
+                return CreditTransferBatch(_links[0])
             return None
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Create refund", e)
 
-    def get_beneficiary_accounts(self, request: GetBeneficiariesRequest):
+    def get_beneficiary_accounts(self, with_address: bool):
         """
         get beneficiary accounts (with accompanied customer)
         :param request: withAddress: if the address needs to be included
@@ -227,12 +227,11 @@ class Refund(object):
         }
         """
         url = self.client.instance_url("/transfers/beneficiaries")
-        data = request.to_request()
         try:
             self.client.refresh_token_if_required()
             response = requests.get(
                 url=url,
-                data=data,
+                data={"withAddress": with_address},
                 headers=self.client.headers(),
                 timeout=15,
             )
@@ -242,7 +241,7 @@ class Refund(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("get beneficiaries", e)
 
-    def disable_beneficiary_accounts(self, request: GetBeneficiariesRequest):
+    def disable_beneficiary_accounts(self, request: DisableBeneficiaryRequest):
         """
         disable beneficiary account (with accompanied customer)
         :param request: withAddress: if the address needs to be included
@@ -258,12 +257,11 @@ class Refund(object):
                 timeout=15,
             )
             if "ApiErrorCode" in response.headers:
-                raise self.client.raise_error("get beneficiaries", response)
-            return GetbeneficiarieResponse(response.json()['beneficiaries'])
+                raise self.client.raise_error("disable beneficiaries", response)
         except requests.exceptions.RequestException as e:
-            raise self.client.raise_error_from_request("get beneficiaries", e)
+            raise self.client.raise_error_from_request("disable beneficiaries", e)
 
-    def feed(self, refund_feed):
+    def feed(self, refund_feed:RefundFeed):
         url = self.client.instance_url("/transfer")
         try:
             self.client.refresh_token_if_required()
@@ -278,7 +276,7 @@ class Refund(object):
             feed_response = response.json()
             while len(feed_response["Entries"]) > 0:
                 for msg in feed_response["Entries"]:
-                    refund_feed.refund(RefundStatusEntry(msg))
+                    refund_feed.refund(Refund(msg))
                 response = requests.get(
                     url=url,
                     headers=self.client.headers(),
@@ -289,21 +287,3 @@ class Refund(object):
                 feed_response = response.json()
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Feed refunds", e)
-
-
-class RefundFeed:
-    def refund(self, refund):
-        """
-        :refund: – Class object containing
-            * id: Twikey id
-            * iban: IBAN of the beneficiary
-            * bic: BIC of the beneficiary
-            * amount: Amount of the refund
-            * msg: Message for the beneficiary
-            * place: Optional place
-            * ref: Your reference
-            * date: Date when the transfer was requested
-            * state: Paid
-            * bkdate: Date when the transfer was done
-        """
-        pass

@@ -1,43 +1,68 @@
-class InvoiceCreatedResponse:
+class PaymentEvent:
     """
-    InvoiceResponse maps the response from the Twikey API after creating an invoice.
+    Represents a single payment event or attempt for an invoice.
 
     Attributes:
-        id (str): Unique identifier of the invoice.
-        number (str): Invoice number.
-        title (str): Title or message associated with the invoice.
-        ct (int): Contract template ID.
-        amount (float): Amount billed.
-        date (str): Invoice creation date.
-        duedate (str): Invoice due date.
-        status (str): Status of the invoice (e.g., 'BOOKED').
-        url (str): URL to view the invoice.
-        lines (list[InvoiceLineItem]): Line items on the invoice.
+        method (str): The method used for the payment. Can be:
+            - 'sdd' for Direct Debit
+            - 'paylink' for payment via link
+            - 'transfer' for wire transfer
+            - 'manual' for manual payment (marked by a user)
+        action (str): The action received, either 'payment' or 'payment_fail'.
+        id (str, optional): Transaction ID for direct debit (sdd).
+        e2e (str, optional): End-to-End identifier for SEPA direct debit.
+        pmtinf (str, optional): Payment information for direct debit.
+        iban (str, optional): The IBAN from which the amount was paid (for 'sdd' and 'transfer').
+        bic (str, optional): BIC code of the paying account (for 'transfer').
+        rc (str, optional): Return code from the bank (e.g., 'PAID' or error code) for 'sdd'.
+        link (str, optional): Payment link identifier for 'paylink'.
+        msg (str, optional): Invoice title ('transfer') or user message ('manual').
+        date (str): Date of the action (e.g., '2025-08-01' or ISO timestamp for 'paylink'/'manual').
+        double (bool): True if this was a duplicate payment (already paid), otherwise False.
     """
 
-    __slots__ = ["id", "number", "title", "ct", "amount", "date", "duedate", "state", "url", "lines"]
+    __slots__ = (
+        "action", "double", "id", "e2e", "pmtinf", "method", "mndtid",
+        "iban", "rc", "date", "bic", "msg", "link"
+    )
+
+    def paid_by_link(self):
+        return self.method == "paylink"
+
+    def paid_by_sdd(self):
+        return self.method == "sdd"
+
+    def paid_by_card(self):
+        return self.method == "rcc"
+
+    def paid_by_transfer(self):
+        return self.method == "transfer"
+
+    def paid_by_override(self):
+        return self.method == "manual"
 
     def __init__(self, **kwargs):
-        for attr in self.__slots__:
-            if attr != "lines":
-                setattr(self, attr, kwargs.get(attr))
-            else:
-                self.lines = [InvoiceLineItem(**line) for line in kwargs.get("lines", [])]
+        self.action: str = kwargs.get("action")
+        # double payment
+        self.double:bool = kwargs.get("double")
+        self.method:str = kwargs.get("method") # "sdd", "rcc", "paylink", "transfer", "manual"
+        self.date = kwargs.get("date")
 
-    def __str__(self):
-        base_info = "\n".join(f"{attr:<10}: {getattr(self, attr, None)}" for attr in self.__slots__)
+        # Sdd
+        self.e2e:str = kwargs.get("e2e")
+        self.id:int = kwargs.get("id")
+        self.pmtinf:str = kwargs.get("pmtinf")
+        self.mndtid:str = kwargs.get("mndtid")
+        self.rc:str = kwargs.get("rc")
+        # Paymentlink
+        self.link:int = kwargs.get("link")
+        # Transfer
+        self.iban:str = kwargs.get("iban")
+        self.bic:str = kwargs.get("bic")
+        self.msg:str = kwargs.get("msg")
 
-        line_info = "\n\nLine Items:\n"
-        if self.lines:
-            for line in self.lines:
-                line_info += f" - {str(line)}\n"
-        else:
-            line_info += " - (none)\n"
 
-        return base_info + line_info
-
-
-class InvoiceResponse:
+class Invoice:
     """
     InvoiceDetailsResponse parses the response from the invoice details endpoint.
 
@@ -62,7 +87,7 @@ class InvoiceResponse:
     __slots__ = [
         "id", "number", "title", "remittance", "ref", "state", "amount",
         "date", "duedate", "ct", "url", "lines",
-        "last_payment", "meta", "customer"
+        "payment_events", "meta", "customer"
     ]
 
     def __init__(self, **kwargs):
@@ -80,7 +105,7 @@ class InvoiceResponse:
 
         # Optional includes
         self.lines = [InvoiceLineItem(**line) for line in kwargs.get("lines", [])]
-        self.last_payment = kwargs.get("lastpayment", [])
+        self.payment_events = [PaymentEvent(**events) for events in kwargs.get("lastpayment", [])]
         self.meta = kwargs.get("meta", {})
         self.customer = kwargs.get("customer", {})
 
@@ -116,6 +141,22 @@ class InvoiceResponse:
 
         return base_info + line_info + payment_info + meta_info + customer_info
 
+class InvoiceFeed:
+    def start(self, position: str, lenght: int):
+        """
+        Allow storing the start of the feed
+        :param position: position where the feed started
+        :param lenght: number of items in the feed
+        """
+        pass
+
+    def invoice(self, invoice: Invoice):
+        """
+        Handle an invoice of the feed
+        :param invoice: the updated invoice
+        :return: error from the function or False to continue
+        """
+        pass
 
 class InvoiceLineItem:
     """
@@ -179,7 +220,7 @@ class BulkBatchDetailsItem:
         self.status = kwargs.get("status")
 
     def __str__(self):
-        return f"Invoice ID: {self.id}, Status: {self.status}"
+        return f"InvoiceBatch ID: {self.id}, Status: {self.status}"
 
 
 class BulkBatchDetailsResponse:

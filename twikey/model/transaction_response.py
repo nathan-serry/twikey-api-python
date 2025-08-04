@@ -1,6 +1,6 @@
-class TransactionStatusEntry:
+class Transaction:
     """
-    Represents a single entry in a transaction status response.
+    Represents a single transaction
 
     Attributes reflect the fields returned by the API.
     """
@@ -26,6 +26,16 @@ class TransactionStatusEntry:
     def __str__(self):
         return f"Transaction ID: {self.id}, Amount: {self.amount}, State: {self.state}"
 
+class TransactionFeed:
+    def transaction(self, transaction: Transaction):
+        """
+        Handle a transaction from the feed.
+
+        :param: transaction: The updated transaction
+        :return: Return True if an error occurred, else return False
+        """
+        pass
+
 
 class TransactionStatusResponse:
     """
@@ -35,7 +45,7 @@ class TransactionStatusResponse:
     __slots__ = ["entries"]
 
     def __init__(self, raw: dict):
-        self.entries = [TransactionStatusEntry(entry) for entry in raw.get("Entries", [])]
+        self.entries = [Transaction(entry) for entry in raw.get("Entries", [])]
 
     def __str__(self):
         return "\n".join(str(entry) for entry in self.entries)

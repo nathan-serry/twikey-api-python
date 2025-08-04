@@ -40,10 +40,11 @@ class PaymentLinkRequest:
     ]
 
     def __init__(self, **kwargs):
+        unknown_keys = set(kwargs) - set(self.__slots__)
+        if unknown_keys:
+            raise TypeError(f"Unknown parameter(s): {', '.join(unknown_keys)}")
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
-        if self.custom is None:
-            self.custom = {}
 
     def to_request(self) -> dict:
         """
@@ -58,13 +59,10 @@ class PaymentLinkRequest:
                 parts = attr.split("_")
                 key = parts[0] + "".join(part.capitalize() for part in parts[1:])
                 retval[key] = value
-        # Voeg custom attributen toe, zonder conversie
-        retval.update(self.custom)
 
         return retval
 
-
-class StatusRequest:
+class PaymentLinkStatusRequest:
     """
     Get the status of a payment link
 
@@ -110,8 +108,7 @@ class StatusRequest:
 
         return params
 
-
-class RefundRequest:
+class PaymentLinkRefundRequest:
     """
     Refund the full or partial amount of a payment link
 
@@ -127,6 +124,9 @@ class RefundRequest:
     __slots__ = ["id", "message", "amount", "iban", "bic"]
 
     def __init__(self, **kwargs):
+        unknown_keys = set(kwargs) - set(self.__slots__)
+        if unknown_keys:
+            raise TypeError(f"Unknown parameter(s): {', '.join(unknown_keys)}")
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
 
@@ -137,22 +137,3 @@ class RefundRequest:
             if val is not None:
                 req[key] = val
         return req
-
-
-class RemoveRequest:
-    """
-    Request model for removing a payment link.
-
-    :param id: The ID of the payment link to be removed (str). Only links with status 'created' can be deleted.
-    """
-
-    __slots__ = ["id"]
-
-    def __init__(self, id: str):
-        self.id = id
-
-    def to_request(self):
-        """
-        :returns: A dictionary representation of the request, suitable for sending as request parameters.
-        """
-        return {"id": self.id}

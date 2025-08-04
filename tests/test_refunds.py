@@ -2,9 +2,12 @@ import os
 import twikey
 import unittest
 import uuid
-from twikey.model.refund_request import *
+from twikey.model.refund_request import AddBeneficiaryRequest, CreateCreditTransferRequest, \
+    CreateTransferBatchRequest, TransferBatchDetailsRequest, DisableBeneficiaryRequest
+from twikey.model.refund_response import Refund
 
-class TestPaylinks(unittest.TestCase):
+
+class TestRefunds(unittest.TestCase):
     _twikey = None
 
     ct = 1
@@ -77,11 +80,7 @@ class TestPaylinks(unittest.TestCase):
         )
         self.assertIsNotNone(refund)
 
-        details = self._twikey.refund.details(
-            CreditTransferDetailRequest(
-                id=refund.id
-            )
-        )
+        details = self._twikey.refund.details(refund_id=refund.id)
         self.assertIsNotNone(details)
 
     def test_remove(self):
@@ -114,11 +113,7 @@ class TestPaylinks(unittest.TestCase):
         )
         self.assertIsNotNone(refund)
 
-        self._twikey.refund.remove(
-            RemoveCreditTransferRequest(
-                id=refund.id
-            )
-        )
+        self._twikey.refund.remove(refund_id=refund.id)
 
     def test_create_batch(self):
         customer_number = str(uuid.uuid4())
@@ -204,29 +199,46 @@ class TestPaylinks(unittest.TestCase):
         self.assertIsNotNone(details)
 
     def test_get_beneficiaries(self):
-        beneficiaries = self._twikey.refund.get_beneficiary_accounts(
-            GetBeneficiariesRequest(
-                with_address=False
-            )
-        )
+        beneficiaries = self._twikey.refund.get_beneficiary_accounts(with_address=True)
         self.assertIsNotNone(beneficiaries)
 
     def test_disable_beneficiary(self):
-        pass
+        customer_number = str(uuid.uuid4())
+        benef = self._twikey.refund.create_beneficiary_account(
+            AddBeneficiaryRequest(
+                customer_number=customer_number,
+                email="info@twikey.com",
+                name="Info Twikey",
+                l="en",
+                address="Abby road",
+                city="Liverpool",
+                zip="1526",
+                country="BE",
+                mobile="",
+                iban="NL46ABNA8910219718",
+                bic="ABNANL2A",
+            )
+        )
+        self.assertIsNotNone(benef)
+
+        self._twikey.refund.disable_beneficiary_accounts(
+            DisableBeneficiaryRequest(
+                iban = "NL46ABNA8910219718",
+                customer_number = customer_number
+            )
+        )
 
     def test_feed(self):
         self._twikey.refund.feed(MyFeed())
 
 
 class MyFeed(twikey.RefundFeed):
-    def refund(self, refund):
-        # print(
-        #     "Refund update #{0} {1} Euro with new state={2}".format(
-        #         refund["id"], refund["amount"], refund["state"]
-        #     )
-        # )
-        print(refund)
-        print("-" * 50)
+    def refund(self, refund:Refund):
+        print(
+            "Refund update #{0} {1} Euro with new state={2}".format(
+                refund.id, refund.amount, refund.state
+            )
+        )
 
 
 if __name__ == "__main__":

@@ -1,9 +1,10 @@
 from enum import Enum
-
+from uuid import UUID
+from datetime import date
 
 class InvoiceRequest:
     """
-    InvoiceRequest holds the full set of fields used to create an invoice via the Twikey API.
+    Invoice holds the full set of fields used to create an invoice via the Twikey API.
 
     Attributes:
     id (str): UUID of the invoice
@@ -13,8 +14,8 @@ class InvoiceRequest:
     ref (str): Internal reference for your system.
     ct (str): Contract template identifier.
     amount (float): Amount to be billed. (required)
-    date (str): Invoice issue date (YYYY-MM-DD). (required)
-    duedate (str): Due date for payment (YYYY-MM-DD). (required)
+    date (date): Invoice issue date (YYYY-MM-DD). (required)
+    duedate (date): Due date for payment (YYYY-MM-DD). (required)
     locale (str): Language of the invoice (e.g., 'nl', 'fr', 'de').
     manual (bool): Whether the invoice should be collected automatically.
     pdf (str): Base64-encoded PDF content.
@@ -56,6 +57,9 @@ class InvoiceRequest:
     }
 
     def __init__(self, **kwargs):
+        unknown_keys = set(kwargs) - set(self.__slots__)
+        if unknown_keys:
+            raise TypeError(f"Unknown parameter(s): {', '.join(unknown_keys)}")
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
 
@@ -67,6 +71,10 @@ class InvoiceRequest:
                 key = self._field_map.get(attr, attr)
                 if isinstance(value, bool):
                     retval[key] = "true" if value else "false"
+                elif isinstance(value, UUID):
+                    retval[key] = str(value)
+                elif isinstance(value, date):
+                    retval[key] = value.isoformat()
                 elif isinstance(value, list):
                     retval[key] = [item.to_dict() for item in value]
                 elif hasattr(value, "to_dict"):
@@ -74,7 +82,6 @@ class InvoiceRequest:
                 else:
                     retval[key] = value
         return retval
-
 
 class Customer:
     """
@@ -119,6 +126,9 @@ class Customer:
     }
 
     def __init__(self, **kwargs):
+        unknown_keys = set(kwargs) - set(self.__slots__)
+        if unknown_keys:
+            raise TypeError(f"Unknown parameter(s): {', '.join(unknown_keys)}")
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
 
@@ -161,6 +171,9 @@ class LineItem:
     }
 
     def __init__(self, **kwargs):
+        unknown_keys = set(kwargs) - set(self.__slots__)
+        if unknown_keys:
+            raise TypeError(f"Unknown parameter(s): {', '.join(unknown_keys)}")
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
 
@@ -220,33 +233,6 @@ class UpdateInvoiceRequest:
                 key = self._field_map.get(attr, attr)
                 retval[key] = value
         return retval
-
-
-class DeleteRequest:
-    """
-    DeleteInvoiceRequest bevat enkel het ID van de factuur die verwijderd moet worden.
-
-    Attributes:
-        id (str): UUID van de factuur die verwijderd moet worden. (required)
-    """
-
-    __slots__ = ["id"]
-
-    def __init__(self, **kwargs):
-        self.id = kwargs.get("id")
-
-    def to_request(self) -> dict:
-        """
-        Zet de DeleteInvoiceRequest om naar een dictionary geschikt voor API-verzending.
-
-        Returns:
-            dict: De request payload met juiste veldnamen.
-        """
-        retval = {}
-        if self.id is not None and self.id != "":
-            retval["id"] = self.id
-        return retval
-
 
 class DetailsRequest:
     """
@@ -375,26 +361,3 @@ class BulkInvoiceRequest:
             list: A list of dictionaries representing each invoice request.
         """
         return [inv.to_request() for inv in self.invoices]
-
-
-class BulkBatchDetailsRequest:
-    """
-    BulkBatchDetailsRequest represents a request to retrieve the result of a bulk invoice upload.
-
-    Attributes:
-        batch_id (str): The batch ID returned by the bulk create endpoint.
-    """
-
-    __slots__ = ["batch_id"]
-
-    def __init__(self, batch_id: str):
-        self.batch_id = batch_id
-
-    def to_request(self) -> dict:
-        """
-        Converts the request to a dictionary suitable for use as query parameters.
-
-        Returns:
-            dict: Dictionary with 'batchId' as key.
-        """
-        return {"batchId": self.batch_id}

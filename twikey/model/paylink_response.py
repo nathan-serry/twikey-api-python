@@ -44,7 +44,7 @@ class TimeInfo:
             setattr(self, key, raw.get(key))
 
 
-class PaylinkEntry:
+class Paylink:
     """
     Represents a single entry for paylink responses.
     """
@@ -60,3 +60,13 @@ class PaylinkEntry:
 
     def __str__(self):
         return f"Paylink ID: {self.id}, Ref: {self.ref}, Amount: {self.amount}, State: {self.state}"
+
+class PaylinkFeed:
+    def paylink(self, paylink:Paylink) -> bool:
+        """
+        Custom logic for handeling the paylinks gained from the api call
+
+        :param paylink: information about a singular paylink
+        :return: in case of your business logic decides stop processing updates return True
+        """
+        pass

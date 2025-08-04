@@ -93,6 +93,9 @@ class InviteRequest:
     }
 
     def __init__(self, **kwargs):
+        unknown_keys = set(kwargs) - set(self.__slots__)
+        if unknown_keys:
+            raise TypeError(f"Unknown parameter(s): {', '.join(unknown_keys)}")
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
 
@@ -154,6 +157,9 @@ class SignRequest(InviteRequest):
 
     def __init__(self, **kwargs):
         _ = InviteRequest  # To indicate intentional inheritance without call
+        unknown_keys = set(kwargs) - set(self.__slots__)
+        if unknown_keys:
+            raise TypeError(f"Unknown parameter(s): {', '.join(unknown_keys)}")
         for attr in self.__slots__:
             setattr(self, attr, kwargs.get(attr))
 
@@ -162,12 +168,15 @@ class SignRequest(InviteRequest):
         for attr in self.__slots__:
             value = getattr(self, attr, None)
             if value is not None and value != "":
-                key = self._field_map.get(attr, attr)  # map attr name if exists
-                # Convert boolean to "true"/"false" string if needed
-                if isinstance(value, bool):
-                    retval[key] = "true" if value else "false"
+                if attr == "method":
+                    retval["method"] = value.value
                 else:
-                    retval[key] = value
+                    key = self._field_map.get(attr, attr)  # map attr name if exists
+                    # Convert boolean to "true"/"false" string if needed
+                    if isinstance(value, bool):
+                        retval[key] = "true" if value else "false"
+                    else:
+                        retval[key] = value
         return retval
 
 
@@ -241,7 +250,7 @@ class QueryMandateRequest:
         if self.state:
             retval["state"] = self.state
         if self.page is not None:
-            retval["page"] = self.page
+            retval["page"] = str(self.page)
         return retval
 
 
@@ -370,55 +379,5 @@ class PdfUploadRequest:
         """
         retval = {"mndtId": self.mndt_id, "pdfPath": self.pdf_path}
         if self.bank_signature is not None:
-            retval["bankSignature"] = self.bank_signature
+            retval["bankSignature"] = str(self.bank_signature)
         return retval
-
-
-class PdfRetrieveRequest:
-    """
-    PdfRetrieveRequest holds the parameter to retrieve
-    the PDF document of a mandate via the Twikey API.
-
-    Attributes:
-        mndt_id (str): Mandate reference (Twikey internal ID). Required.
-    """
-
-    __slots__ = ["mndt_id"]
-
-    def __init__(self, mndt_id: str):
-        self.mndt_id = mndt_id
-
-    def to_request(self) -> dict:
-        """
-        Converts the PdfRetrieveRequest object to a dictionary
-        suitable for sending as request parameters in the Twikey API.
-
-        Returns:
-            dict: Dictionary containing the mandate reference.
-        """
-        return {"mndtId": self.mndt_id}
-
-
-class CustomerAccessRequest:
-    """
-    CustomerAccessRequest holds the parameter to request
-    customer access to their mandate via the Twikey API.
-
-    Attributes:
-        mndt_id (str): Mandate reference (Twikey internal ID). Required.
-    """
-
-    __slots__ = ["mndt_id"]
-
-    def __init__(self, mndt_id: str):
-        self.mndt_id = mndt_id
-
-    def to_request(self) -> dict:
-        """
-        Converts the CustomerAccessRequest object to a dictionary
-        suitable for sending as request parameters in the Twikey API.
-
-        Returns:
-            dict: Dictionary containing the mandate reference.
-        """
-        return {"mndtId": self.mndt_id}
