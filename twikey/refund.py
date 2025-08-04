@@ -113,7 +113,7 @@ class Refund(object):
 
     def remove(self, request: RemoveCreditTransferRequest):
         """
-        See https://www.twikey.com/api/#remove-a-transaction
+        See https://www.twikey.com/api/#remove-a-credit-transfer
         Removes a credit transfer that has not yet been sent to the bank.
         At least one of 'id' or 'ref' must be provided.
         Parameters:
@@ -244,7 +244,7 @@ class Refund(object):
 
     def disable_beneficiary_accounts(self, request: GetBeneficiariesRequest):
         """
-        get beneficiary accounts (with accompanied customer)
+        disable beneficiary account (with accompanied customer)
         :param request: withAddress: if the address needs to be included
         :return  None
         """

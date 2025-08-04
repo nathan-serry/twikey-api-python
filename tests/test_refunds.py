@@ -17,7 +17,6 @@ class TestPaylinks(unittest.TestCase):
             base_url = os.environ["TWIKEY_API_URL"]
         self._twikey = twikey.TwikeyClient(key, base_url)
 
-    @unittest.skip
     def test_new_beneficiary(self):
         customer_number = str(uuid.uuid4())
         benef = self._twikey.refund.create_beneficiary_account(
@@ -36,7 +35,6 @@ class TestPaylinks(unittest.TestCase):
             )
         )
         self.assertIsNotNone(benef)
-        print(benef)
 
         refund = self._twikey.refund.create(
             CreateCreditTransferRequest(
@@ -48,9 +46,7 @@ class TestPaylinks(unittest.TestCase):
             )
         )
         self.assertIsNotNone(refund)
-        # print(refund)
 
-    @unittest.skip
     def test_detail(self):
         customer_number = str(uuid.uuid4())
         benef = self._twikey.refund.create_beneficiary_account(
@@ -80,16 +76,14 @@ class TestPaylinks(unittest.TestCase):
             )
         )
         self.assertIsNotNone(refund)
-        print(refund)
 
         details = self._twikey.refund.details(
             CreditTransferDetailRequest(
                 id=refund.id
             )
         )
-        print(details)
+        self.assertIsNotNone(details)
 
-    @unittest.skip
     def test_remove(self):
         customer_number = str(uuid.uuid4())
         benef = self._twikey.refund.create_beneficiary_account(
@@ -119,7 +113,6 @@ class TestPaylinks(unittest.TestCase):
             )
         )
         self.assertIsNotNone(refund)
-        print(refund)
 
         self._twikey.refund.remove(
             RemoveCreditTransferRequest(
@@ -127,7 +120,6 @@ class TestPaylinks(unittest.TestCase):
             )
         )
 
-    @unittest.skip
     def test_create_batch(self):
         customer_number = str(uuid.uuid4())
         benef = self._twikey.refund.create_beneficiary_account(
@@ -164,9 +156,8 @@ class TestPaylinks(unittest.TestCase):
                 iban="NL36RABO0115531548",
             )
         )
-        print(credit_transfers)
+        self.assertIsNotNone(credit_transfers)
 
-    @unittest.skip
     def test_batch_details(self):
         customer_number = str(uuid.uuid4())
         benef = self._twikey.refund.create_beneficiary_account(
@@ -210,16 +201,15 @@ class TestPaylinks(unittest.TestCase):
                 id=credit_transfers.id
             )
         )
-        print(details)
+        self.assertIsNotNone(details)
 
-    @unittest.skip
     def test_get_beneficiaries(self):
         beneficiaries = self._twikey.refund.get_beneficiary_accounts(
             GetBeneficiariesRequest(
                 with_address=False
             )
         )
-        print(beneficiaries)
+        self.assertIsNotNone(beneficiaries)
 
     def test_disable_beneficiary(self):
         pass
