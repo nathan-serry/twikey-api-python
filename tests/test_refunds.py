@@ -214,7 +214,6 @@ class TestPaylinks(unittest.TestCase):
     def test_disable_beneficiary(self):
         pass
 
-    @unittest.skip
     def test_feed(self):
         self._twikey.refund.feed(MyFeed())
 
