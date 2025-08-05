@@ -180,8 +180,8 @@ class TestDocument(unittest.TestCase):
             )
         )
         self._twikey.document.update(
+            invite.mndtId,
             UpdateMandateRequest(
-                mndt_id=invite.mndtId,
                 ct=self.ct,
                 state="active",
                 mobile="+32499000001",

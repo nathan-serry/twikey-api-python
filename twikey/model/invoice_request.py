@@ -83,6 +83,7 @@ class InvoiceRequest:
                     retval[key] = value
         return retval
 
+
 class Customer:
     """
     Customer contains customer information used in an invoice.
@@ -237,6 +238,7 @@ class UpdateInvoiceRequest:
                     retval[key] = value
         return retval
 
+
 class DetailsRequest:
     """
     InvoiceDetailsRequest is used to request the details of a specific invoice.
@@ -277,7 +279,7 @@ class DetailsRequest:
 class ActionRequest:
     """
     Attributes:
-        id (str): UUID van de factuur die verwijderd moet worden. (required)
+        id (str): UUID of an invoice. (required)
 
     """
 
