@@ -16,6 +16,26 @@ class DocumentService(object):
         self.logger = logging.getLogger(__name__)
 
     def create(self, request: InviteRequest) -> InviteResponse:
+        """
+        See https://www.twikey.com/api/#invite-a-customer
+
+        Create a new resource via a POST request to the API.
+
+        This method sends the provided request payload to the corresponding endpoint
+        and parses the JSON response into a response model. Typically used to initiate
+        actions like inviting a customer, creating a mandate, or generating a payment link.
+        Raises an error if the API response contains an error code or the request fails.
+
+        Args:
+            request (InviteRequest): An object representing the payload to send.
+
+        Returns:
+            InviteResponse: A structured response object representing the server’s reply.
+
+        Raises:
+            TwikeyAPIError: If the API returns an error or the request fails.
+        """
+
         url = self.client.instance_url("/invite")
         data = request.to_request()
         try:
@@ -36,7 +56,6 @@ class DocumentService(object):
         data = request.to_request()
         if not request.method:
             raise self.client.raise_error("Missing method")
-
         try:
             self.client.refresh_token_if_required()
             response = requests.post(

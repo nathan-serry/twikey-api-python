@@ -14,6 +14,26 @@ class InvoiceService(object):
         self.logger = logging.getLogger(__name__)
 
     def create(self, request: InvoiceRequest, origin=False, purpose=False, manual=False) -> Invoice:
+        """
+        See https://www.twikey.com/api/#create-invoice
+
+        Create a new invoice via a POST request to the API.
+
+        This method sends the provided request payload to the corresponding endpoint
+        and parses the JSON response into a response model. Typically used to initiate
+        actions like inviting a customer, creating a mandate, or generating a payment link.
+        Raises an error if the API response contains an error code or the request fails.
+
+        Args:
+            request (InvoiceRequest): A model representing the payload to send.
+
+        Returns:
+            Invoice: A structured response object representing the server’s reply.
+
+        Raises:
+            TwikeyAPIError: If the API returns an error or the request fails.
+        """
+
         url = self.client.instance_url("/invoice")
         data = request.to_request()
         try:

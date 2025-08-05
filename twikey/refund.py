@@ -42,30 +42,27 @@ class RefundService(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Create beneficiary", e)
 
-    def create(self, request: CreateCreditTransferRequest):
+    def create(self, request: CreateCreditTransferRequest) -> Refund:
         """
-        Creation of a refund provided the customer was created and has a customerNumber
-        :param request: customerNumber The customer number (required) and transactionDetails required
+        See https://www.twikey.com/api/#createadd-a-new-credit-transfer
 
-        transactionDetails should contain
-            * iban:	Iban of the beneficiary
-            * message:	Message to the creditor	Yes	string
-            * amount:	Amount to be sent
-            * ref:	Reference of the transaction
-            * date:	Required execution date of the transaction (ReqdExctnDt)
-            * place:	Optional place
+        Create a new credit transfer via a POST request to the API.
 
-        :return {
-                    "id": "11DD32CA20180412220109485",
-                    "iban": "BE68068097250734",
-                    "bic": "JVBABE22",
-                    "amount": 12,
-                    "msg": "test",
-                    "place": null,
-                    "ref": "123",
-                    "date": "2018-04-12"
-                }
+        This method sends the provided request payload to the corresponding endpoint
+        and parses the JSON response into a response model. Typically used to initiate
+        actions like inviting a customer, creating a mandate, or generating a payment link.
+        Raises an error if the API response contains an error code or the request fails.
+
+        Args:
+            request (CreateCreditTransferRequest): An object representing the payload to send.
+
+        Returns:
+            Refund: A structured response object representing the server’s reply.
+
+        Raises:
+            TwikeyAPIError: If the API returns an error or the request fails.
         """
+
         url = self.client.instance_url("/transfer")
         data = request.to_request()
         data["_state"] = "PAID"
@@ -92,7 +89,7 @@ class RefundService(object):
         See https://www.twikey.com/api/#status-paymentlink
         Retrieve transaction status by ID, ref, or mandate ID.
         Args:
-            request (TransactionStatusRequest): The query parameters. (See StatusPaymentLinkRequest)
+            refund_id (str): The query parameters. (See StatusPaymentLinkRequest)
         Returns:
             TransactionStatusResponse: List of transaction status entries.
         Raises:

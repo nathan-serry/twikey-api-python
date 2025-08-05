@@ -13,9 +13,24 @@ class TransactionService(object):
     def create(self, request: NewTransactionRequest) -> Transaction:
         """
         See https://www.twikey.com/api/#new-transaction
-        :param data: parameters of the rest call as a struct
-        :return: struct containing return value of the rest call
+
+        Create a new transaction via a POST request to the API.
+
+        This method sends the provided request payload to the corresponding endpoint
+        and parses the JSON response into a response model. Typically used to initiate
+        actions like inviting a customer, creating a mandate, or generating a payment link.
+        Raises an error if the API response contains an error code or the request fails.
+
+        Args:
+            request (NewTransactionRequest): An object representing the payload to send.
+
+        Returns:
+            Transaction: A structured response object representing the server’s reply.
+
+        Raises:
+            TwikeyAPIError: If the API returns an error or the request fails.
         """
+
         url = self.client.instance_url("/transaction")
         data = request.to_request()
         try:

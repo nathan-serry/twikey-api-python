@@ -12,10 +12,24 @@ class PaylinkService(object):
     def create(self, request: PaymentLinkRequest) -> CreatedPaylinkResponse:
         """
         See https://www.twikey.com/api/#create-paymentlink
-        Posts a new payment link via the api to the server
-        :param request: the create parameters as a dictionary. (see PaymentLinkRequest)
-        :return: a typed version of the response
+
+        Create a new payment link via a POST request to the API.
+
+        This method sends the provided request payload to the corresponding endpoint
+        and parses the JSON response into a response model. Typically used to initiate
+        actions like inviting a customer, creating a mandate, or generating a payment link.
+        Raises an error if the API response contains an error code or the request fails.
+
+        Args:
+            request (PaymentLinkRequest): An object representing the payload to send.
+
+        Returns:
+            CreatedPaylinkResponse: A structured response object representing the server’s reply.
+
+        Raises:
+            TwikeyAPIError: If the API returns an error or the request fails.
         """
+
         url = self.client.instance_url("/payment/link")
         data = request.to_request()
         try:
