@@ -1,7 +1,8 @@
 import requests
-from twikey.model.refund_request import AddBeneficiaryRequest, CreateCreditTransferRequest, \
-    CreateTransferBatchRequest, DisableBeneficiaryRequest
-from twikey.model.refund_response import Refund, CreditTransferBatch, GetbeneficiarieResponse, RefundFeed
+
+from model.refund_request import DisableBeneficiaryRequest
+from .model.refund_request import NewBeneficiaryRequest, NewRefundRequest, NewRefundBatchRequest
+from .model.refund_response import Refund, CreditTransferBatch, GetbeneficiarieResponse, RefundFeed
 
 
 class RefundService(object):
@@ -9,7 +10,7 @@ class RefundService(object):
         super().__init__()
         self.client = client
 
-    def create_beneficiary_account(self, request: AddBeneficiaryRequest):
+    def create_beneficiary_account(self, request: NewBeneficiaryRequest):
         """
         Creation a beneficiary account (with accompanied customer)
         :param request: data all_customer fields + iban and bic
@@ -42,27 +43,30 @@ class RefundService(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Create beneficiary", e)
 
-    def create(self, request: CreateCreditTransferRequest) -> Refund:
+    def create(self, request: NewRefundRequest) -> Refund:
         """
-        See https://www.twikey.com/api/#createadd-a-new-credit-transfer
+        Creation of a refund provided the customer was created and has a customerNumber
+        :param request: customerNumber The customer number (required) and transactionDetails required
 
-        Create a new credit transfer via a POST request to the API.
+        transactionDetails should contain
+            * iban:	Iban of the beneficiary
+            * message:	Message to the creditor	Yes	string
+            * amount:	Amount to be sent
+            * ref:	Reference of the transaction
+            * date:	Required execution date of the transaction (ReqdExctnDt)
+            * place:	Optional place
 
-        This method sends the provided request payload to the corresponding endpoint
-        and parses the JSON response into a response model. Typically used to initiate
-        actions like inviting a customer, creating a mandate, or generating a payment link.
-        Raises an error if the API response contains an error code or the request fails.
-
-        Args:
-            request (CreateCreditTransferRequest): An object representing the payload to send.
-
-        Returns:
-            Refund: A structured response object representing the server’s reply.
-
-        Raises:
-            TwikeyAPIError: If the API returns an error or the request fails.
+        :return {
+                    "id": "11DD32CA20180412220109485",
+                    "iban": "BE68068097250734",
+                    "bic": "JVBABE22",
+                    "amount": 12,
+                    "msg": "test",
+                    "place": null,
+                    "ref": "123",
+                    "date": "2018-04-12"
+                }
         """
-
         url = self.client.instance_url("/transfer")
         data = request.to_request()
         data["_state"] = "PAID"
@@ -84,12 +88,12 @@ class RefundService(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Create refund", e)
 
-    def details(self, refund_id: str):
+    def details(self, refund_id: str) -> Refund:
         """
         See https://www.twikey.com/api/#status-paymentlink
         Retrieve transaction status by ID, ref, or mandate ID.
         Args:
-            refund_id (str): The query parameters. (See StatusPaymentLinkRequest)
+            request (TransactionStatusRequest): The query parameters. (See StatusPaymentLinkRequest)
         Returns:
             TransactionStatusResponse: List of transaction status entries.
         Raises:
@@ -129,7 +133,7 @@ class RefundService(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Remove Credit Transfer", e)
 
-    def create_batch(self, request: CreateTransferBatchRequest):
+    def create_batch(self, request: NewRefundBatchRequest) -> CreditTransferBatch:
         """
         Creation of a batch of refunds
         :param request: Contract Template. (Required) Iban if different from the profile iban (Optional)
@@ -162,7 +166,7 @@ class RefundService(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Create batch refunds", e)
 
-    def batch_detail(self, request: CreateTransferBatchRequest):
+    def batch_detail(self, request: NewRefundBatchRequest) -> CreditTransferBatch:
         """
         Creation of a batch of refunds
         :param request: Contract Template. (Required) Iban if different from the profile iban (Optional)
@@ -195,7 +199,7 @@ class RefundService(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("Create refund", e)
 
-    def get_beneficiary_accounts(self, with_address: bool):
+    def get_beneficiary_accounts(self, with_address: bool) -> GetbeneficiarieResponse:
         """
         get beneficiary accounts (with accompanied customer)
         :param request: withAddress: if the address needs to be included
@@ -244,8 +248,7 @@ class RefundService(object):
         :param request: withAddress: if the address needs to be included
         :return  None
         """
-        data = request.to_request()
-        url = self.client.instance_url(f"/transfers/beneficiaries/{data['iban']}?customerNumber={data['customerNumber']}")
+        url = self.client.instance_url(f"/transfers/beneficiaries/{request.iban}?customerNumber={request.customer_number}")
         try:
             self.client.refresh_token_if_required()
             response = requests.delete(

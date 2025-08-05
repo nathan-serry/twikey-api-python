@@ -19,9 +19,11 @@ class TestPaylinks(unittest.TestCase):
         self._twikey = twikey.TwikeyClient(key, base_url)
 
     def test_new_invite(self):
-        pl = self._twikey.paylink.create(PaymentLinkRequest(
+        pl = self._twikey.paylink.create(
+            PaymentLinkRequest(
                 email= "no-repy@twikey.com",
                 title= "Test Message",
+                ref= "Merchant Reference",
                 amount= 10.00,
             )
         )
@@ -30,9 +32,7 @@ class TestPaylinks(unittest.TestCase):
 
     def test_status(self):
         pl = self._twikey.paylink.status_details(
-            PaymentLinkStatusRequest(
-                id="644722"
-            )
+            PaymentLinkStatusRequest(id="644722")
         )
         self.assertIsNotNone(pl)
 
@@ -40,7 +40,7 @@ class TestPaylinks(unittest.TestCase):
     def test_refund(self):
         refund = self._twikey.paylink.refund(
             PaymentLinkRefundRequest(
-                id="PAID_PAYLINK_ID",
+                id=os.environ["PAID_PAYLINK_ID"],
                 message="hello",
                 iban="BE51561419613262",
                 bic="GKCCBEBB",
@@ -60,7 +60,6 @@ class TestPaylinks(unittest.TestCase):
             )
         )
         self.assertIsNotNone(pl.id)
-
         self._twikey.paylink.remove(link_id=pl.id)
 
     def test_feed(self):
@@ -69,11 +68,7 @@ class TestPaylinks(unittest.TestCase):
 
 class MyFeed(twikey.PaylinkFeed):
     def paylink(self, paylink:Paylink):
-        print(
-            "Paylink update #{0} {1} Euro with new state={2}".format(
-                paylink.id, paylink.amount, paylink.state
-            )
-        )
+        print(f"Paylink update #{paylink.id} {paylink.amount} Euro with new state={paylink.state}")
 
 
 if __name__ == "__main__":

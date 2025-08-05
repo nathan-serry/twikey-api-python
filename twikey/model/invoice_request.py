@@ -231,7 +231,10 @@ class UpdateInvoiceRequest:
             value = getattr(self, attr, None)
             if value is not None and value != "":
                 key = self._field_map.get(attr, attr)
-                retval[key] = value
+                if isinstance(value, date):
+                    retval[key] = value.isoformat()
+                else:
+                    retval[key] = value
         return retval
 
 class DetailsRequest:

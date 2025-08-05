@@ -7,27 +7,34 @@ from twikey.model.transaction_request import NewTransactionRequest, StatusReques
     RefundRequest, QueryTransactionsRequest, RemoveTransactionRequest
 from twikey.model.transaction_response import Transaction
 
-
 class TestTransaction(unittest.TestCase):
     _twikey = None
 
     ct = 1
+    mndt_id = None
 
     @unittest.skipIf("TWIKEY_API_KEY" not in os.environ, "No TWIKEY_API_KEY set")
     def setUp(self):
         key = os.environ["TWIKEY_API_KEY"]
         base_url = "https://test.beta.twikey.com/api/creditor"
-        if "CT" in os.environ:
-            self.ct = os.environ["CT"]
         if "TWIKEY_API_URL" in os.environ:
             base_url = os.environ["TWIKEY_API_URL"]
+
+        if "MNDTNUMBER" in os.environ:
+            self.mndt_id = os.environ["MNDTNUMBER"]
+        else:
+            self.skipTest("No MNDTNUMBER set")
+
+        if "CT" in os.environ:
+            self.ct = os.environ["CT"]
+        else:
+            self.skipTest("No CT set")
         self._twikey = twikey.TwikeyClient(key, base_url)
 
-    @unittest.skipIf("MNDTNUMBER" not in os.environ, "No MNDTNUMBER set")
     def test_new_invite(self):
         tx = self._twikey.transaction.create(
             NewTransactionRequest(
-                mndt_id = os.environ["MNDTNUMBER"],
+                mndt_id = self.mndt_id,
                 message = "Test Message",
                 ref = "Merchant Reference",
                 amount = 10.00,
@@ -40,7 +47,7 @@ class TestTransaction(unittest.TestCase):
     def test_tx_status(self):
         tx = self._twikey.transaction.status_details(
             StatusRequest(
-                mndt_id="CORERECURRENTNL16318",
+                mndt_id=self.mndt_id,
                 state="ERROR",
                 include=["collection", "lastupdate", "links"]
             )
@@ -58,7 +65,7 @@ class TestTransaction(unittest.TestCase):
     def test_update(self):
         tx = self._twikey.transaction.create(
             NewTransactionRequest(
-                mndt_id="CORERECURRENTNL16318",
+                mndt_id=self.mndt_id,
                 message="Test Message",
                 ref="Merchant Reference",
                 amount=10.00,
@@ -91,11 +98,10 @@ class TestTransaction(unittest.TestCase):
     def test_batch_import(self):
         self._twikey.transaction.batch_import(self.ct, "PAIN008_FILEPATH")
 
-
     def test_query(self):
         tx = self._twikey.transaction.create(
             NewTransactionRequest(
-                mndt_id="CORERECURRENTNL16318",
+                mndt_id=self.mndt_id,
                 message="Test Message",
                 ref="Merchant Reference",
                 amount=50.00,
@@ -117,7 +123,7 @@ class TestTransaction(unittest.TestCase):
     def test_remove(self):
         tx = self._twikey.transaction.create(
             NewTransactionRequest(
-                mndt_id="CORERECURRENTNL16318",
+                mndt_id=self.mndt_id,
                 message="Test Message",
                 ref="Merchant Reference",
                 amount=50.00,
@@ -154,18 +160,11 @@ class MyFeed(twikey.TransactionFeed):
         if state == "PAID":
             _state = "is now paid"
         elif state == "ERROR":
-            _state = "failed due to '" + transaction.bkmsg + "'"
+            _state = f"failed due to '#{transaction.bkmsg}'"
             if final:
                 # final means Twikey has gone through all dunning steps, but customer still did not pay
                 _final = "with no more dunning steps"
-        print(
-            "Transaction update",
-            transaction.amount,
-            "euro with",
-            ref,
-            _state,
-            _final,
-        )
+        print(f"Transaction update #{transaction.amount} euro with #{ref} #{_state} #{_final}")
 
 if __name__ == "__main__":
     unittest.main()

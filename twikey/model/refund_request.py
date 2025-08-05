@@ -1,4 +1,4 @@
-class CreateCreditTransferRequest:
+class NewRefundRequest:
     """
     Model om een terugbetaling (credit transfer) aan te maken.
 
@@ -31,7 +31,7 @@ class CreateCreditTransferRequest:
         return retval
 
 
-class CreateTransferBatchRequest:
+class NewRefundBatchRequest:
     """
     Model voor het aanmaken van een batch met terugbetalingen.
 
@@ -52,7 +52,7 @@ class CreateTransferBatchRequest:
         return {attr: getattr(self, attr) for attr in self.__slots__ if getattr(self, attr) is not None}
 
 
-class TransferBatchDetailsRequest:
+class RefundBatchStatusRequest:
     """
     Model om details op te vragen van een batch terugbetalingen.
 
@@ -73,7 +73,7 @@ class TransferBatchDetailsRequest:
         return {attr: getattr(self, attr) for attr in self.__slots__ if getattr(self, attr) is not None}
 
 
-class AddBeneficiaryRequest:
+class NewBeneficiaryRequest:
     """
     Model om een begunstigde toe te voegen aan een contract.
 

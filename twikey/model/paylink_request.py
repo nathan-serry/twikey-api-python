@@ -35,7 +35,7 @@ class PaymentLinkRequest:
 
     __slots__ = [
         "title", "amount", "customerNumber", "email", "lastname", "firstname", "companyName",
-        "coc", "l", "mobile", "ct", "remittance", "redirectUrl", "place", "expiry", "sendInvite",
+        "coc", "l", "mobile", "ct", "remittance", "ref", "redirectUrl", "place", "expiry", "sendInvite",
         "address", "city", "zip", "country", "txref", "method", "invoice", "isTemplate", "custom"
     ]
 
