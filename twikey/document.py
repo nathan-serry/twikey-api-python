@@ -126,7 +126,7 @@ class DocumentService(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("detail", e)
 
-    def query(self, request: QueryMandateRequest) -> list:
+    def query(self, request: QueryMandateRequest) -> QueryMandateResponse:
         """
         See https://www.twikey.com/api/#query-mandate
 
@@ -140,7 +140,7 @@ class DocumentService(object):
                             At least one of 'iban', 'customerNumber' or 'email' is required.
 
         Returns:
-            list[QueryMandateResponse]: A list of mandate details that match the query.
+            QueryMandateResponse: A list of mandate details that match the query.
 
         Raises:
             TwikeyError: If the request fails or the API returns an error.
@@ -161,7 +161,7 @@ class DocumentService(object):
             json_response = response.json()
             contracts_data = json_response.get("Contracts", [])
             self.logger.debug("Mandate query result: %s" % json_response)
-            return [QueryMandateResponse(**contract) for contract in contracts_data]
+            return QueryMandateResponse(contracts_data)
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("query", e)
 
@@ -384,7 +384,7 @@ class DocumentService(object):
         """
 
         url = self.client.instance_url(
-            f"/mandate/pdf?mndtId={request.mndt_id}&bankSignature={request.bank_signature}")
+            f"/mandate/pdf?mndtId={request.mandate_number}&bankSignature={request.bank_signature}")
         try:
             self.client.refresh_token_if_required()
             with open(request.pdf_path, "rb") as file:

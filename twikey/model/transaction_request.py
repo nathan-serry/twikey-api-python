@@ -3,7 +3,7 @@ class NewTransactionRequest:
     NewTransactionRequest Allows you to create a new transaction
 
     Attributes:
-        mndt_id (str): Mandate reference (required).
+        mandate_number (str): Mandate reference (required).
         date (str): Transaction date (optional, ISO format YYYY-MM-DD).
         reqcolldt (str): Desired collection date (optional).
         message (str): Message on bank statement (required, max. 140 characters).
@@ -13,7 +13,7 @@ class NewTransactionRequest:
         refase2e (bool): Use ref as E2E ID (optional).
     """
 
-    __slots__ = ["mndt_id", "date", "reqcolldt", "message", "ref", "amount", "place", "refase2e"]
+    __slots__ = ["mandate_number", "date", "reqcolldt", "message", "ref", "amount", "place", "refase2e"]
 
     def __init__(self, **kwargs):
         unknown_keys = set(kwargs) - set(self.__slots__)
@@ -30,12 +30,14 @@ class NewTransactionRequest:
             dict: request payload using the correct fieldnames
         """
         retval = {}
-        for attr in self.__slots__:
-            value = getattr(self, attr, None)
-            if value is not None and value != "":
-                parts = attr.split("_")
-                key = parts[0] + "".join(part.capitalize() for part in parts[1:])
-                retval[key] = value
+        retval["mndtId"] = self.mandate_number
+        retval["date"] = self.date
+        retval["reqcolldt"] = self.reqcolldt
+        retval["message"] = self.message
+        retval["ref"] = self.ref
+        retval["amount"] = self.amount
+        retval["place"] = self.place
+        retval["refase2e"] = self.refase2e
         return retval
 
 
@@ -51,12 +53,12 @@ class StatusRequest:
         include (list[str]): Optional list of includes (collection, lastupdate, link).
     """
 
-    __slots__ = ["id", "ref", "mndt_id", "state", "include"]
+    __slots__ = ["id", "ref", "mandate_number", "state", "include"]
 
-    def __init__(self, id=None, ref=None, mndt_id=None, state=None, include=None):
+    def __init__(self, id=None, ref=None, mandate_number=None, state=None, include=None):
         self.id = id
         self.ref = ref
-        self.mndt_id = mndt_id
+        self.mandate_number = mandate_number
         self.state = state
         self.include = include or []
 
@@ -66,8 +68,8 @@ class StatusRequest:
             params["id"] = self.id
         if self.ref:
             params["ref"] = self.ref
-        if self.mndt_id:
-            params["mndtId"] = self.mndt_id
+        if self.mandate_number:
+            params["mndtId"] = self.mandate_number
         if self.state:
             params["state"] = self.state
         for inc in self.include:

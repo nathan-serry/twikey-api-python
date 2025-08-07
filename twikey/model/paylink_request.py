@@ -55,21 +55,21 @@ class PaymentLinkRequest:
         retval = {}
         retval["title"]=self.title
         retval["amount"]=self.amount
-        retval["customer_number"]=self.customer_number
+        retval["customerNumber"]=self.customer_number
         retval["email"]=self.email
-        retval["last_name"]=self.last_name
-        retval["first_name"]=self.first_name
-        retval["company_name"]=self.company_name
+        retval["lastName"]=self.last_name
+        retval["firstName"]=self.first_name
+        retval["companyName"]=self.company_name
         retval["coc"]=self.coc
         retval["l"]=self.l
         retval["mobile"]=self.mobile
         retval["ct"]=self.ct
         retval["remittance"]=self.remittance
         retval["ref"]=self.ref
-        retval["redirect_url"]=self.redirect_url
+        retval["redirectUrl"]=self.redirect_url
         retval["place"]=self.place
         retval["expiry"]=self.expiry
-        retval["send_invite"]=self.send_invite
+        retval["sendInvite"]=self.send_invite
         retval["address"]=self.address
         retval["city"]=self.city
         retval["zip"]=self.zip
@@ -77,7 +77,7 @@ class PaymentLinkRequest:
         retval["txref"]=self.txref
         retval["method"]=self.method
         retval["invoice"]=self.invoice
-        retval["is_template"]=self.is_template
+        retval["isTemplate"]=self.is_template
         retval["custom"]=self.custom
         return retval
 

@@ -133,9 +133,6 @@ class TransactionService(object):
             TwikeyError: If the API returns an error or the request fails.
         """
 
-        # :param data: parameters of the rest call as a struct
-        # :return: struct containing return value of the rest call
-        # """
         url = self.client.instance_url("/transaction/action")
         data = request.to_request()
         try:

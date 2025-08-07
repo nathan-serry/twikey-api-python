@@ -34,7 +34,7 @@ class TestTransaction(unittest.TestCase):
     def test_new_invite(self):
         tx = self._twikey.transaction.create(
             NewTransactionRequest(
-                mndt_id = self.mndt_id,
+                mandate_number = self.mndt_id,
                 message = "Test Message",
                 ref = "Merchant Reference",
                 amount = 10.00,
@@ -47,7 +47,7 @@ class TestTransaction(unittest.TestCase):
     def test_tx_status(self):
         tx = self._twikey.transaction.status_details(
             StatusRequest(
-                mndt_id=self.mndt_id,
+                mandate_number=self.mndt_id,
                 state="ERROR",
                 include=["collection", "lastupdate", "links"]
             )
@@ -65,7 +65,7 @@ class TestTransaction(unittest.TestCase):
     def test_update(self):
         tx = self._twikey.transaction.create(
             NewTransactionRequest(
-                mndt_id=self.mndt_id,
+                mandate_number=self.mndt_id,
                 message="Test Message",
                 ref="Merchant Reference",
                 amount=10.00,
@@ -101,7 +101,7 @@ class TestTransaction(unittest.TestCase):
     def test_query(self):
         tx = self._twikey.transaction.create(
             NewTransactionRequest(
-                mndt_id=self.mndt_id,
+                mandate_number=self.mndt_id,
                 message="Test Message",
                 ref="Merchant Reference",
                 amount=50.00,
@@ -123,7 +123,7 @@ class TestTransaction(unittest.TestCase):
     def test_remove(self):
         tx = self._twikey.transaction.create(
             NewTransactionRequest(
-                mndt_id=self.mndt_id,
+                mandate_number=self.mndt_id,
                 message="Test Message",
                 ref="Merchant Reference",
                 amount=50.00,

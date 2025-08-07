@@ -1,3 +1,4 @@
+from array import ArrayType
 from datetime import datetime
 
 class Document:
@@ -49,7 +50,6 @@ class Document:
         }
 
     def __str__(self):
-
         base_info = "\n".join(
             f"{slot:<22}: {getattr(self, slot, None)}" for slot in self.__slots__ if slot != "supplementary_data"
         )
@@ -83,7 +83,8 @@ class DocumentFeed:
         """
         pass
 
-    def updated_document(self, original_doc_number: str, doc: Document, reason: str, author:str, evt_time: datetime) -> bool:
+    def updated_document(self, original_doc_number: str, doc: Document, reason: str, author: str,
+                         evt_time: datetime) -> bool:
         """
         Handle an update of a document
         :param original_doc_number: original reference to the document
@@ -94,7 +95,7 @@ class DocumentFeed:
         """
         pass
 
-    def cancelled_document(self, doc_number: str, reason: str, author:str, evt_time: datetime) -> bool:
+    def cancelled_document(self, doc_number: str, reason: str, author: str, evt_time: datetime) -> bool:
         """
         Handle an cancelled document
         :param doc_number: reference to the document
@@ -129,35 +130,24 @@ class SignResponse:
             return f"SignResponse url={self.url} mndtId={self.mandate_number}\n"
         return f"SignResponse mandate_number={self.mandate_number}\n"
 
+
 class QueryMandateResponse:
-    # __slots__ = [
-    #     "id", "type", "state", "suspended", "pdf_available", "mandate_number",
-    #     "contract_number", "ct", "sign_date", "iban", "bic"
-    # ]
-    __slots__ = ["documents"]
+    __slots__ = [
+        "mandates"
+    ]
 
-    def __init__(self, **kwargs):
-
-        doc = Document(
-            document_number=kwargs.get("id"),
-            type=kwargs.get("type"),
-            state=kwargs.get("state"),
-            # suspended = kwargs.get("suspended")
-            # pdf_available = kwargs.get("pdf_available")
-            mandate_number=kwargs.get("mandate_number"),
-            contract_number=kwargs.get("contract_number"),
-            # ct = kwargs.get("ct")
-            sign_date=kwargs.get("sign_date"),
-            iban=kwargs.get("iban"),
-            bic=kwargs.get("bic"),
-        )
-        for key in self.__slots__:
-            if "_" in key:
-                prefix, suffix = key.split("_")
-                datakey = f"{prefix}{suffix.title()}"
-                setattr(self, key, kwargs.get(datakey))
-            else:
-                setattr(self, key, kwargs.get(key))
+    def __init__(self, contracts: ArrayType):
+        self.mandates = []
+        for contract in contracts:
+            doc = Document()
+            doc.type = contract.get("type")
+            doc.state = contract.get("state")
+            doc.mandate_number = contract.get("mandateNumber")
+            doc.contract_number = contract.get("contractNumber")
+            doc.sign_date = contract.get("signDate")
+            doc.iban = contract.get("iban")
+            doc.bic = contract.get("bic")
+            self.mandates.append(doc)
 
     def __str__(self):
         return "\n".join(f"{slot:<18}: {getattr(self, slot, None)}" for slot in self.__slots__)

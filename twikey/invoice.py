@@ -197,7 +197,7 @@ class InvoiceService(object):
         except requests.exceptions.RequestException as e:
             raise self.client.raise_error_from_request("UBL upload", e)
 
-    def delete(self, inovice_id: str):
+    def delete(self, invoice_id: str):
         """
         See https://www.twikey.com/api/#delete-invoice
 
@@ -208,7 +208,7 @@ class InvoiceService(object):
         Raises an error if the API response contains an error code or the request fails.
 
         Args:
-            inovice_id (str): The unique identifier of the invoice to cancel.
+            invoice_id (str): The unique identifier of the invoice to cancel.
 
         Returns:
             None
@@ -217,7 +217,7 @@ class InvoiceService(object):
             TwikeyAPIError: If the request fails or the response contains an API error code.
         """
 
-        url = self.client.instance_url("/invoice/" + inovice_id)
+        url = self.client.instance_url("/invoice/" + invoice_id)
         try:
             self.client.refresh_token_if_required()
             headers = self.client.headers("application/json")
